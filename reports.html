@@ -107,6 +107,61 @@
           </div>
         </div>
 
+        <!-- Reception Team Combined Total Breakdown Card -->
+        <div class="card" style="border-color: var(--forest-200); background: #ffffff;">
+          <div class="card-header" style="margin-bottom: 0.75rem;">
+            <div>
+              <div class="card-title">
+                <i data-lucide="users" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                Reception Desk Combined Operations (Shilpa & Gokul)
+              </div>
+              <div class="card-desc">Combined reception desk performance integrating both morning and evening shifts</div>
+            </div>
+            <span class="badge badge-forest">Shilpa & Gokul Included</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+            <!-- Shilpa Subtotal -->
+            <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 700; color: var(--forest-900); font-size: 0.875rem;">Shilpa (Reception)</span>
+                <span class="badge badge-staff">Staff</span>
+              </div>
+              <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--slate-600); display: flex; flex-direction: column; gap: 0.25rem;">
+                <div>Attributed Days: <strong id="rep-shilpa-records">0</strong></div>
+                <div>Attributed Inquiries: <strong id="rep-shilpa-inquiries">0</strong></div>
+                <div>Attributed Bookings: <strong id="rep-shilpa-bookings">0</strong></div>
+              </div>
+            </div>
+
+            <!-- Gokul Subtotal -->
+            <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 700; color: var(--forest-900); font-size: 0.875rem;">Gokul (Reception)</span>
+                <span class="badge badge-staff">Staff</span>
+              </div>
+              <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--slate-600); display: flex; flex-direction: column; gap: 0.25rem;">
+                <div>Attributed Days: <strong id="rep-gokul-records">0</strong></div>
+                <div>Attributed Inquiries: <strong id="rep-gokul-inquiries">0</strong></div>
+                <div>Attributed Bookings: <strong id="rep-gokul-bookings">0</strong></div>
+              </div>
+            </div>
+
+            <!-- Combined Grand Total (Shilpa + Gokul) -->
+            <div style="background-color: var(--forest-50); border: 1px solid var(--forest-300); border-radius: 10px; padding: 1rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 800; color: var(--forest-900); font-size: 0.875rem;">COMBINED RECEPTION TOTAL</span>
+                <span class="badge badge-admin">Both Included</span>
+              </div>
+              <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--slate-700); display: flex; flex-direction: column; gap: 0.25rem;">
+                <div>Total Inquiries: <strong id="rep-combined-inquiries" style="color: var(--forest-900); font-size: 0.95rem;">0</strong></div>
+                <div>Confirmed Bookings: <strong id="rep-combined-bookings" style="color: var(--forest-900); font-size: 0.95rem;">0</strong></div>
+                <div>Total Communications: <strong id="rep-combined-comms" style="color: var(--forest-900);">0</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Scoped Records Preview Table -->
         <div class="card">
           <div class="card-header">
@@ -115,7 +170,7 @@
                 <i data-lucide="eye" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
                 Document Preview Ledger
               </div>
-              <div class="card-desc">Review records that will be included in the exported document</div>
+              <div class="card-desc">Review records and combined receptionist totals that will be exported</div>
             </div>
           </div>
 
@@ -124,6 +179,7 @@
               <thead>
                 <tr>
                   <th>Date</th>
+                  <th>Receptionist</th>
                   <th class="numeric">Inquiries</th>
                   <th class="numeric">Responses</th>
                   <th class="numeric">Turnaround</th>
@@ -134,8 +190,10 @@
                 </tr>
               </thead>
               <tbody id="export-preview-body">
-                <tr><td colspan="8" style="text-align: center; padding: 2rem;">Loading preview...</td></tr>
+                <tr><td colspan="9" style="text-align: center; padding: 2rem;">Loading preview...</td></tr>
               </tbody>
+              <tfoot id="export-preview-foot">
+              </tfoot>
             </table>
           </div>
         </div>

@@ -62,7 +62,7 @@ export function exportToPdf({
   doc.text(`Generated At: ${getReportGenerationTimestamp()}`, 14, 36);
 
   doc.text(`Authorized Administrator: ${adminName}`, pageWidth - 14, 31, { align: 'right' });
-  doc.text(`Total Records: ${records.length}`, pageWidth - 14, 36, { align: 'right' });
+  doc.text(`Reception Staff: Shilpa & Gokul (Both Included in Totals)`, pageWidth - 14, 36, { align: 'right' });
 
   // 4. Calculate Totals for Footer Row
   let sumEnquiries = 0;
@@ -82,8 +82,18 @@ export function exportToPdf({
     if (rec.whatsapp_calls_messages !== null) sumWhatsApp += rec.whatsapp_calls_messages;
     if (rec.normal_calls !== null) sumNormal += rec.normal_calls;
 
+    const c = (rec.created_by_name || '').toLowerCase();
+    const u = (rec.updated_by_name || '').toLowerCase();
+    const hasShilpa = c.includes('shilpa') || u.includes('shilpa');
+    const hasGokul = c.includes('gokul') || u.includes('gokul');
+    let staffName = 'Shilpa & Gokul (Reception)';
+    if (hasShilpa && hasGokul) staffName = 'Shilpa & Gokul (Handover)';
+    else if (hasShilpa) staffName = 'Shilpa (Reception)';
+    else if (hasGokul) staffName = 'Gokul (Reception)';
+
     return [
       rec.report_date,
+      staffName,
       rec.total_enquiries !== null ? String(rec.total_enquiries) : '-',
       rec.total_responses !== null ? String(rec.total_responses) : '-',
       rec.total_confirmations !== null ? String(rec.total_confirmations) : '-',
@@ -94,9 +104,10 @@ export function exportToPdf({
     ];
   });
 
-  // Append Totals row
+  // Append Combined Totals row (Both Shilpa & Gokul)
   tableBody.push([
-    'TOTAL',
+    'COMBINED TOTAL (Shilpa & Gokul)',
+    'Both Included',
     String(sumEnquiries),
     String(sumResponses),
     String(sumConfirmations),
@@ -111,6 +122,7 @@ export function exportToPdf({
     startY: 40,
     head: [[
       'Date (YYYY-MM-DD)',
+      'Receptionist / Shift',
       'Total no. of Enquiries',
       'Total no. of Responses',
       'Total no. of Confirmations',
@@ -122,7 +134,7 @@ export function exportToPdf({
     body: tableBody,
     theme: 'grid',
     styles: {
-      fontSize: 8.5,
+      fontSize: 8,
       cellPadding: 2.2,
       font: 'helvetica',
       textColor: [40, 40, 40],
@@ -137,7 +149,8 @@ export function exportToPdf({
       valign: 'middle',
     },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 26 },
+      0: { halign: 'center', cellWidth: 24 },
+      1: { halign: 'left', cellWidth: 38 },
       1: { halign: 'right', cellWidth: 34 },
       2: { halign: 'right', cellWidth: 34 },
       3: { halign: 'right', cellWidth: 36 },

@@ -68,12 +68,18 @@ export async function exportToExcel({
   worksheet.getCell('E4').value = records.length;
   worksheet.getCell('E4').font = { size: 10 };
 
+  worksheet.getCell('A5').value = 'Reception Personnel:';
+  worksheet.getCell('A5').font = { bold: true, size: 10, color: { argb: 'FF555555' } };
+  worksheet.getCell('B5').value = 'Shilpa & Gokul (Combined Reception Desk)';
+  worksheet.getCell('B5').font = { size: 10, bold: true, color: { argb: 'FF103B37' } };
+
   // Empty separator row
   worksheet.addRow([]);
 
-  // 4. Table Header Row (Row 6)
+  // 4. Table Header Row (Row 7)
   const headerRow = worksheet.addRow([
     'Date (YYYY-MM-DD)',
+    'Receptionist / Shift',
     'Total no. of Enquiries',
     'Total no. of Responses',
     'Total no. of Confirmations',
@@ -116,8 +122,18 @@ export async function exportToExcel({
 
   records.forEach((rec, idx) => {
     const isEven = idx % 2 === 0;
+    const c = (rec.created_by_name || '').toLowerCase();
+    const u = (rec.updated_by_name || '').toLowerCase();
+    const hasShilpa = c.includes('shilpa') || u.includes('shilpa');
+    const hasGokul = c.includes('gokul') || u.includes('gokul');
+    let staffName = 'Shilpa & Gokul (Reception)';
+    if (hasShilpa && hasGokul) staffName = 'Shilpa & Gokul (Handover)';
+    else if (hasShilpa) staffName = 'Shilpa (Reception)';
+    else if (hasGokul) staffName = 'Gokul (Reception)';
+
     const row = worksheet.addRow([
       rec.report_date,
+      staffName,
       rec.total_enquiries !== null ? rec.total_enquiries : '',
       rec.total_responses !== null ? rec.total_responses : '',
       rec.total_confirmations !== null ? rec.total_confirmations : '',
@@ -140,7 +156,7 @@ export async function exportToExcel({
       cell.font = { name: 'Arial', size: 10 };
       cell.alignment = {
         vertical: 'middle',
-        horizontal: colNumber === 1 ? 'center' : 'right',
+        horizontal: colNumber === 1 ? 'center' : (colNumber === 2 ? 'left' : 'right'),
       };
       cell.border = {
         top: { style: 'thin', color: { argb: 'FFE5E5DC' } },
@@ -158,9 +174,10 @@ export async function exportToExcel({
     });
   });
 
-  // 6. Summary / Totals Row
+  // 6. Summary / Totals Row (Combined Shilpa & Gokul)
   const totalRow = worksheet.addRow([
-    'TOTAL',
+    'COMBINED TOTAL (Shilpa & Gokul)',
+    'Both Included',
     sumEnquiries,
     sumResponses,
     sumConfirmations,
@@ -175,9 +192,20 @@ export async function exportToExcel({
     cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF103B37' } };
     cell.alignment = {
       vertical: 'middle',
-      horizontal: colNumber === 1 ? 'center' : 'right',
+      horizontal: colNumber <= 2 ? 'left' : 'right',
     };
     cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0F2FE' }, // Highlighted light blue-teal
+    };
+    cell.border = {
+      top: { style: 'medium', color: { argb: 'FF103B37' } },
+      bottom: { style: 'double', color: { argb: 'FF103B37' } },
+      left: { style: 'thin', color: { argb: 'FFE5E5DC' } },
+      right: { style: 'thin', color: { argb: 'FFE5E5DC' } },
+    };
+  });
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FFEAF3F1' }, // subtle teal tint
