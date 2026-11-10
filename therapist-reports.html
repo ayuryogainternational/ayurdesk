@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Therapist Reports & Monitoring | AyurDesk - Ayuryoga International</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- CDN Dependencies -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <div class="main-wrapper">
+      <header id="app-header" class="top-header"></header>
+
+      <main class="page-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <h1 class="page-title">Therapist Reports & Monitoring Center</h1>
+                <span class="badge badge-admin">Admin Only</span>
+              </div>
+              <p class="page-desc">Consolidated monthly therapist reports, overtime remuneration (75 MUR/hr), and daily clinical activity analysis</p>
+            </div>
+
+            <!-- View Mode Switcher -->
+            <div style="display: flex; background: #e2e8f0; padding: 0.25rem; border-radius: 10px; gap: 0.25rem;">
+              <button type="button" id="tab-mode-monthly" class="btn btn-primary" style="padding: 0.4rem 0.85rem; font-size: 0.75rem; border-radius: 8px;">
+                <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                <span>Monthly Consolidated Report</span>
+              </button>
+              <button type="button" id="tab-mode-daily" class="btn btn-outline" style="background: transparent; border: none; padding: 0.4rem 0.85rem; font-size: 0.75rem; border-radius: 8px;">
+                <i data-lucide="activity" style="width: 14px; height: 14px;"></i>
+                <span>Daily Analysis & Monitoring</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scope & Filtering Controls Card -->
+        <div class="card" style="margin-bottom: 1.25rem;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i data-lucide="sliders" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                Filter & Period Configuration
+              </div>
+              <div class="card-desc">Select report period and specific therapist filters for the clinical audit</div>
+            </div>
+
+            <button type="button" id="btn-sync-therapist-data" class="btn btn-outline" style="background: white;" title="Pull fresh data from store">
+              <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+              <span>Refresh Data</span>
+            </button>
+          </div>
+
+          <div class="form-grid form-grid-3col">
+            <!-- Monthly Selector (for Monthly view) -->
+            <div class="form-group" id="group-month-selector">
+              <label class="form-label" for="report-month">Report Month</label>
+              <input type="month" id="report-month" class="form-input" value="2026-11" />
+            </div>
+
+            <!-- Daily Selector (for Daily view) -->
+            <div class="form-group" id="group-date-selector" style="display: none;">
+              <label class="form-label" for="report-date">Target Date</label>
+              <input type="date" id="report-date" class="form-input" />
+            </div>
+
+            <!-- Therapist Filter Dropdown -->
+            <div class="form-group">
+              <label class="form-label" for="filter-therapist">Select Therapist</label>
+              <select id="filter-therapist" class="form-select">
+                <option value="all" selected>All Registered Therapists</option>
+                <option value="5a06a587-9d74-4de1-bc70-8ee5f9de5ac3">Dr. Vishnu (Senior Therapist)</option>
+                <option value="therapist-priya-uuid">Priya Nair (Ayurvedic Therapist)</option>
+              </select>
+            </div>
+
+            <!-- Overtime Rule Summary Pill -->
+            <div class="form-group" style="display: flex; flex-direction: column; justify-content: flex-end;">
+              <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.75rem; color: #92400e;">
+                <div style="font-weight: 700;">Overtime Rule Active:</div>
+                <div>Standard: 5.0h/day • Overtime: <strong>75 MUR / hour</strong> above 5h</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================================================================== -->
+        <!-- VIEW 1: MONTHLY CONSOLIDATED REPORT -->
+        <!-- ==================================================================== -->
+        <div id="view-monthly-report">
+          <!-- Executive KPI Banner -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+            <div style="background-color: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.15rem;">
+              <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Active Therapists</div>
+              <div id="kpi-therapists-count" style="font-size: 1.5rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">2</div>
+              <div style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.2rem;">On active roster</div>
+            </div>
+
+            <div style="background-color: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.15rem;">
+              <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Total Duty Days</div>
+              <div id="kpi-days-worked" style="font-size: 1.5rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0 days</div>
+              <div id="kpi-off-days" style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.2rem;">0 off days</div>
+            </div>
+
+            <div style="background-color: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.15rem;">
+              <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Treatments Completed</div>
+              <div id="kpi-total-works" style="font-size: 1.5rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0 works</div>
+              <div style="font-size: 0.6875rem; color: var(--forest-700); margin-top: 0.2rem;">Ayurvedic therapies</div>
+            </div>
+
+            <div style="background-color: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.15rem;">
+              <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Total Duty Hours</div>
+              <div id="kpi-total-hours" style="font-size: 1.5rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0.00 hrs</div>
+              <div id="kpi-regular-hours" style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.2rem;">0.00 hrs regular</div>
+            </div>
+
+            <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 1.15rem;">
+              <div style="font-size: 0.6875rem; font-weight: 700; color: #92400e; text-transform: uppercase;">Total Overtime (> 5h)</div>
+              <div id="kpi-overtime-hours" style="font-size: 1.5rem; font-weight: 800; color: #b45309; margin-top: 0.25rem;">0.00 hrs</div>
+              <div style="font-size: 0.6875rem; color: #b45309; margin-top: 0.2rem;">Rate: 75 MUR/hr</div>
+            </div>
+
+            <div style="background-color: var(--forest-50); border: 1px solid var(--forest-300); border-radius: 12px; padding: 1.15rem;">
+              <div style="font-size: 0.6875rem; font-weight: 800; color: var(--forest-800); text-transform: uppercase;">Combined Overtime Salary</div>
+              <div id="kpi-overtime-salary" style="font-size: 1.5rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0.00 MUR</div>
+              <div style="font-size: 0.6875rem; color: var(--forest-700); margin-top: 0.2rem;">Total payable amount</div>
+            </div>
+          </div>
+
+          <!-- Actions Bar: Export Excel & PDF -->
+          <div class="card" style="margin-bottom: 1.25rem; background-color: var(--forest-50); border-color: var(--forest-200);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--forest-700); text-transform: uppercase;">
+                  Consolidated Monthly Export
+                </div>
+                <div id="export-summary-text" style="font-size: 1.125rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">
+                  Monthly Therapist Report: November 2026
+                </div>
+                <div id="export-metrics-text" style="font-size: 0.75rem; color: var(--slate-600); margin-top: 0.25rem;">
+                  Includes all therapists, working hours, overtime hours (>5h), and overtime remuneration @ 75 MUR/hr
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <button type="button" id="btn-export-excel" class="btn btn-teal">
+                  <i data-lucide="file-spreadsheet" style="width: 16px; height: 16px;"></i>
+                  <span>Download Excel (.xlsx)</span>
+                </button>
+
+                <button type="button" id="btn-export-pdf" class="btn btn-primary">
+                  <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+                  <span>Download PDF (.pdf)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Consolidated Table Card -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="table-properties" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Therapist Monthly Performance & Overtime Remuneration Ledger
+                </div>
+                <div class="card-desc">Detailed monthly breakdown including active days, treatments done, working hours, and overtime calculations</div>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Therapist Name</th>
+                    <th>Email Address</th>
+                    <th class="numeric">Days Worked</th>
+                    <th class="numeric">Off Days</th>
+                    <th class="numeric">Treatments Done</th>
+                    <th class="numeric">Total Working Hours</th>
+                    <th class="numeric">Regular Hours (≤5h)</th>
+                    <th class="numeric">Overtime Hours (>5h)</th>
+                    <th class="numeric">Rate</th>
+                    <th class="numeric" style="font-weight: 800; color: var(--forest-900);">Overtime Salary (MUR)</th>
+                  </tr>
+                </thead>
+                <tbody id="table-monthly-body">
+                  <tr><td colspan="10" style="text-align: center; padding: 2rem;">Loading monthly report...</td></tr>
+                </tbody>
+                <tfoot id="table-monthly-foot"></tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================================================================== -->
+        <!-- VIEW 2: DAILY ANALYSIS & MONITORING -->
+        <!-- ==================================================================== -->
+        <div id="view-daily-analysis" style="display: none;">
+          <!-- Daily Overview Header Card -->
+          <div class="card" style="margin-bottom: 1.25rem;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="activity" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Daily Therapist Clinical Operations & Shift Attendance Analysis
+                </div>
+                <div class="card-desc" id="daily-analysis-subtitle">
+                  Inspect check-in/out timestamps across Shift 1 and Shift 2, overtime status, and individual treatment works done
+                </div>
+              </div>
+              <span id="badge-daily-date" class="badge badge-forest">2026-11-10</span>
+            </div>
+
+            <!-- Daily Summary Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+              <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.875rem;">
+                <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Active on Duty</div>
+                <div id="d-stat-active" style="font-size: 1.35rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0</div>
+              </div>
+
+              <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.875rem;">
+                <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">On Off Day</div>
+                <div id="d-stat-off" style="font-size: 1.35rem; font-weight: 800; color: var(--slate-700); margin-top: 0.25rem;">0</div>
+              </div>
+
+              <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.875rem;">
+                <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Treatments Logged</div>
+                <div id="d-stat-works" style="font-size: 1.35rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0</div>
+              </div>
+
+              <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.875rem;">
+                <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Total Hours Worked</div>
+                <div id="d-stat-hours" style="font-size: 1.35rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0.00 hrs</div>
+              </div>
+
+              <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 0.875rem;">
+                <div style="font-size: 0.6875rem; font-weight: 700; color: #92400e; text-transform: uppercase;">Overtime Hours (>5h)</div>
+                <div id="d-stat-overtime" style="font-size: 1.35rem; font-weight: 800; color: #b45309; margin-top: 0.25rem;">0.00 hrs</div>
+              </div>
+
+              <div style="background-color: var(--forest-50); border: 1px solid var(--forest-300); border-radius: 10px; padding: 0.875rem;">
+                <div style="font-size: 0.6875rem; font-weight: 800; color: var(--forest-700); text-transform: uppercase;">Daily Overtime Pay</div>
+                <div id="d-stat-salary" style="font-size: 1.35rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0.00 MUR</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daily Therapist Activity Cards Container -->
+          <div id="daily-therapist-cards-container" style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/therapist-reports.js"></script>
+</body>
+</html>

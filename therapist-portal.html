@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Therapist Duty & Attendance | AyurDesk - Ayuryoga International</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- CDN Dependencies -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <div class="main-wrapper">
+      <header id="app-header" class="top-header"></header>
+
+      <main class="page-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <h1 class="page-title">Therapist Duty & Attendance Portal</h1>
+                <span class="badge badge-teal">Ayurvedic Therapies</span>
+              </div>
+              <p class="page-desc">Daily 2-shift attendance marking, treatment works recording, and overtime salary management</p>
+            </div>
+
+            <!-- Date Selector -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; background: #ffffff; padding: 0.35rem 0.75rem; border: 1px solid var(--border-color); border-radius: 10px;">
+              <i data-lucide="calendar" style="width: 16px; height: 16px; color: var(--forest-600);"></i>
+              <label for="duty-date" style="font-size: 0.75rem; font-weight: 700; color: var(--slate-600);">Duty Date:</label>
+              <input type="date" id="duty-date" class="form-input" style="padding: 0.25rem 0.5rem; font-size: 0.8125rem; border: 1px solid var(--slate-200); border-radius: 6px;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Off Day Status Banner & Toggle -->
+        <div class="card" style="margin-bottom: 1.25rem; border-color: var(--forest-200); background: #ffffff;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 42px; height: 42px; border-radius: 10px; background-color: var(--forest-50); display: flex; align-items: center; justify-content: center; color: var(--forest-600);">
+                <i data-lucide="coffee" style="width: 22px; height: 22px;"></i>
+              </div>
+              <div>
+                <div style="font-size: 0.875rem; font-weight: 800; color: var(--forest-900);">Therapist Off Day / Leave Status</div>
+                <div style="font-size: 0.75rem; color: var(--slate-500);">Mark this day as Weekly Off or Authorized Leave if not on active clinical duty</div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+              <div id="off-day-reason-box" style="display: none; align-items: center; gap: 0.5rem;">
+                <label for="off-day-reason" style="font-size: 0.75rem; font-weight: 600; color: var(--slate-600);">Reason:</label>
+                <select id="off-day-reason" class="form-select" style="padding: 0.35rem 0.65rem; font-size: 0.75rem;">
+                  <option value="Weekly Off">Weekly Off</option>
+                  <option value="Personal Leave">Personal Leave</option>
+                  <option value="Sick Leave">Sick Leave</option>
+                  <option value="Compensatory Off">Compensatory Off</option>
+                </select>
+              </div>
+
+              <label class="switch-container" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8125rem; font-weight: 700; color: var(--slate-700);">
+                <input type="checkbox" id="check-off-day" style="width: 18px; height: 18px; accent-color: var(--forest-600);" />
+                <span>Mark as Off Day</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Shift Attendance Cards (Daily 2 Check-Ins & Check-Outs) -->
+        <div id="active-duty-section">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+            <!-- Shift 1 (Morning Session) -->
+            <div class="card shift-card" id="card-shift-1">
+              <div class="shift-header">
+                <div class="shift-title">
+                  <i data-lucide="sun" style="width: 18px; height: 18px; color: #f59e0b;"></i>
+                  <span>Shift 1 (Session 1)</span>
+                </div>
+                <span id="badge-shift-1" class="badge badge-staff">Session 1</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                  <div class="form-group">
+                    <label class="form-label" for="check_in_1">Check-In 1</label>
+                    <input type="time" id="check_in_1" class="form-input" style="font-weight: 700;" />
+                    <button type="button" id="btn-punch-in-1" class="btn btn-outline" style="margin-top: 0.4rem; padding: 0.3rem 0.5rem; font-size: 0.6875rem; width: 100%;">
+                      <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
+                      <span>Punch In 1 Now</span>
+                    </button>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="check_out_1">Check-Out 1</label>
+                    <input type="time" id="check_out_1" class="form-input" style="font-weight: 700;" />
+                    <button type="button" id="btn-punch-out-1" class="btn btn-outline" style="margin-top: 0.4rem; padding: 0.3rem 0.5rem; font-size: 0.6875rem; width: 100%;">
+                      <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
+                      <span>Punch Out 1 Now</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; background-color: #f8fafc; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.75rem;">
+                  <span style="color: var(--slate-600);">Shift 1 Logged Hours:</span>
+                  <strong id="display-shift-1-hours" style="color: var(--forest-900); font-size: 0.875rem;">0.00 hrs</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Shift 2 (Afternoon / Evening Session) -->
+            <div class="card shift-card" id="card-shift-2">
+              <div class="shift-header">
+                <div class="shift-title">
+                  <i data-lucide="sunset" style="width: 18px; height: 18px; color: #ea580c;"></i>
+                  <span>Shift 2 (Session 2)</span>
+                </div>
+                <span id="badge-shift-2" class="badge badge-staff">Session 2</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                  <div class="form-group">
+                    <label class="form-label" for="check_in_2">Check-In 2</label>
+                    <input type="time" id="check_in_2" class="form-input" style="font-weight: 700;" />
+                    <button type="button" id="btn-punch-in-2" class="btn btn-outline" style="margin-top: 0.4rem; padding: 0.3rem 0.5rem; font-size: 0.6875rem; width: 100%;">
+                      <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
+                      <span>Punch In 2 Now</span>
+                    </button>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="check_out_2">Check-Out 2</label>
+                    <input type="time" id="check_out_2" class="form-input" style="font-weight: 700;" />
+                    <button type="button" id="btn-punch-out-2" class="btn btn-outline" style="margin-top: 0.4rem; padding: 0.3rem 0.5rem; font-size: 0.6875rem; width: 100%;">
+                      <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
+                      <span>Punch Out 2 Now</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; background-color: #f8fafc; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.75rem;">
+                  <span style="color: var(--slate-600);">Shift 2 Logged Hours:</span>
+                  <strong id="display-shift-2-hours" style="color: var(--forest-900); font-size: 0.875rem;">0.00 hrs</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Hours & Overtime Salary Calculation Dashboard Card -->
+          <div class="card" id="overtime-calc-card" style="margin-bottom: 1.25rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <div style="font-size: 0.875rem; font-weight: 800; color: var(--forest-900); display: flex; align-items: center; gap: 0.5rem;">
+                  <i data-lucide="calculator" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Daily Hours & Overtime Remuneration Engine
+                </div>
+                <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 0.15rem;">
+                  Standard clinical working quota: 5.0 hours/day. Hours above 5.0h automatically qualify as Overtime @ 75 MUR/hour.
+                </div>
+              </div>
+
+              <div id="overtime-status-pill">
+                <span class="badge badge-standard">Within Standard Shift (≤ 5h)</span>
+              </div>
+            </div>
+
+            <!-- Metrics Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+              <!-- Total Working Hours -->
+              <div style="background-color: var(--forest-50); border: 1px solid var(--forest-200); border-radius: 10px; padding: 1rem;">
+                <div style="font-size: 0.6875rem; font-weight: 700; color: var(--forest-700); text-transform: uppercase;">
+                  Total Working Hours
+                </div>
+                <div id="calc-total-hours" style="font-size: 1.5rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">
+                  0.00 hrs
+                </div>
+                <div style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.25rem;">
+                  Combined Shift 1 + Shift 2
+                </div>
+              </div>
+
+              <!-- Regular Shift Hours -->
+              <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+                <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-600); text-transform: uppercase;">
+                  Regular Working Hours
+                </div>
+                <div id="calc-regular-hours" style="font-size: 1.5rem; font-weight: 800; color: var(--slate-800); margin-top: 0.25rem;">
+                  0.00 hrs
+                </div>
+                <div style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.25rem;">
+                  Standard duty cap (Max 5.0h)
+                </div>
+              </div>
+
+              <!-- Overtime Hours -->
+              <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 1rem;">
+                <div style="font-size: 0.6875rem; font-weight: 700; color: #92400e; text-transform: uppercase;">
+                  Overtime Hours (> 5h)
+                </div>
+                <div id="calc-overtime-hours" style="font-size: 1.5rem; font-weight: 800; color: #b45309; margin-top: 0.25rem;">
+                  0.00 hrs
+                </div>
+                <div style="font-size: 0.6875rem; color: #b45309; margin-top: 0.25rem;">
+                  Rate: 75 MUR / hour
+                </div>
+              </div>
+
+              <!-- Overtime Salary Amount -->
+              <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 1rem;">
+                <div style="font-size: 0.6875rem; font-weight: 700; color: #065f46; text-transform: uppercase;">
+                  Overtime Remuneration
+                </div>
+                <div id="calc-overtime-salary" style="font-size: 1.5rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">
+                  0.00 MUR
+                </div>
+                <div style="font-size: 0.6875rem; color: #047857; margin-top: 0.25rem;">
+                  Payable to Therapist
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+              <button type="button" id="btn-save-attendance" class="btn btn-primary" style="padding: 0.65rem 1.25rem;">
+                <i data-lucide="save" style="width: 16px; height: 16px;"></i>
+                <span>Save Attendance & Calculate Overtime</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section: Mark Total Number of Works Done & Working Hours for Each Work -->
+          <div class="card" style="margin-bottom: 1.25rem;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="sparkles" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Therapist Clinical Treatment Works Ledger
+                </div>
+                <div class="card-desc">
+                  Mark all completed Ayurvedic treatments, duration per work, patient attribution, and calculate total treatment hours
+                </div>
+              </div>
+
+              <button type="button" id="btn-open-work-modal" class="btn btn-teal">
+                <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>
+                <span>+ Log Completed Treatment Work</span>
+              </button>
+            </div>
+
+            <!-- Treatment Works Summary Ribbon -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background-color: var(--warm-100); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem;">
+              <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <div>
+                  <span style="font-size: 0.75rem; color: var(--slate-600);">Total Treatments Done Today:</span>
+                  <strong id="display-works-count" style="font-size: 1.125rem; color: var(--forest-900); margin-left: 0.35rem;">0 works</strong>
+                </div>
+                <div style="height: 20px; width: 1px; background-color: var(--slate-300);"></div>
+                <div>
+                  <span style="font-size: 0.75rem; color: var(--slate-600);">Total Treatment Working Hours:</span>
+                  <strong id="display-works-duration" style="font-size: 1.125rem; color: var(--forest-900); margin-left: 0.35rem;">0.00 hrs</strong>
+                </div>
+              </div>
+
+              <span class="badge badge-forest">Live Calculated</span>
+            </div>
+
+            <!-- Works List Table -->
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Patient / Client</th>
+                    <th>Ayurvedic Treatment Type</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th class="numeric">Duration (Hours)</th>
+                    <th>Clinical Notes</th>
+                    <th style="text-align: right;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="works-list-body">
+                  <tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--slate-400);">No treatments logged for this date yet. Click "+ Log Completed Treatment Work" above.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Off Day View Notice (Hidden by default, shown when Off Day checked) -->
+        <div id="off-day-view-notice" class="card" style="display: none; background: #f8fafc; border: 1px dashed var(--slate-400); text-align: center; padding: 3rem 1.5rem;">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; color: var(--slate-600);">
+            <i data-lucide="coffee" style="width: 28px; height: 28px;"></i>
+          </div>
+          <h3 style="font-size: 1.125rem; font-weight: 800; color: var(--forest-900);">Marked as Off Day / Authorized Leave</h3>
+          <p id="off-day-reason-text" style="font-size: 0.8125rem; color: var(--slate-600); margin-top: 0.35rem;">
+            This day is officially registered as Weekly Off. Working hours and treatment duty are paused.
+          </p>
+          <div style="margin-top: 1.25rem;">
+            <button type="button" id="btn-resume-duty" class="btn btn-outline">
+              <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+              <span>Unmark & Resume Clinical Duty</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Therapist Monthly Summary Card -->
+        <div class="card" style="margin-top: 1.5rem;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i data-lucide="calendar-check" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                My Monthly Performance & Overtime Statement
+              </div>
+              <div class="card-desc">Review your monthly attendance, treatments completed, overtime hours, and accrued overtime salary</div>
+            </div>
+            <span class="badge badge-admin" id="monthly-badge-label">Month: November 2026</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+            <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.875rem;">
+              <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Days on Duty</div>
+              <div id="m-stat-days" style="font-size: 1.25rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0 days</div>
+            </div>
+
+            <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.875rem;">
+              <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Off Days</div>
+              <div id="m-stat-offdays" style="font-size: 1.25rem; font-weight: 800; color: var(--slate-700); margin-top: 0.25rem;">0 days</div>
+            </div>
+
+            <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.875rem;">
+              <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Treatments Done</div>
+              <div id="m-stat-works" style="font-size: 1.25rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0 works</div>
+            </div>
+
+            <div style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 0.875rem;">
+              <div style="font-size: 0.6875rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Total Duty Hours</div>
+              <div id="m-stat-hours" style="font-size: 1.25rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0.00 hrs</div>
+            </div>
+
+            <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 0.875rem;">
+              <div style="font-size: 0.6875rem; font-weight: 700; color: #92400e; text-transform: uppercase;">Overtime Hours</div>
+              <div id="m-stat-overtime" style="font-size: 1.25rem; font-weight: 800; color: #b45309; margin-top: 0.25rem;">0.00 hrs</div>
+            </div>
+
+            <div style="background-color: var(--forest-50); border: 1px solid var(--forest-300); border-radius: 10px; padding: 0.875rem;">
+              <div style="font-size: 0.6875rem; font-weight: 800; color: var(--forest-700); text-transform: uppercase;">Overtime Salary</div>
+              <div id="m-stat-salary" style="font-size: 1.25rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0.00 MUR</div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Add Treatment Work Modal -->
+  <div id="modal-add-work" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <i data-lucide="heart-pulse" style="width: 20px; height: 20px; color: var(--forest-600);"></i>
+          <h2 class="modal-title">Log Completed Treatment Work</h2>
+        </div>
+        <button type="button" id="btn-close-work-modal" class="btn-modal-close">&times;</button>
+      </div>
+
+      <form id="form-add-work" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label form-label-required" for="work-patient">Patient / Client Name</label>
+          <input type="text" id="work-patient" class="form-input" placeholder="e.g. Jean Dupont" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label form-label-required" for="work-treatment-type">Ayurvedic Treatment Type</label>
+          <select id="work-treatment-type" class="form-select" required>
+            <option value="Abhyanga (Herbal Full Body Massage)">Abhyanga (Herbal Full Body Massage)</option>
+            <option value="Shirodhara (Medicated Oil Therapy)">Shirodhara (Medicated Oil Therapy)</option>
+            <option value="Navara Kizhi (Rejuvenation Rice Bolus)">Navara Kizhi (Rejuvenation Rice Bolus)</option>
+            <option value="Udwarthanam (Herbal Powder Scrub)">Udwarthanam (Herbal Powder Scrub)</option>
+            <option value="Pizhichil (Royal Oil Bath Therapy)">Pizhichil (Royal Oil Bath Therapy)</option>
+            <option value="Nasyam (Nasal Medication Therapy)">Nasyam (Nasal Medication Therapy)</option>
+            <option value="Kati Vasti (Lumbar Care Therapy)">Kati Vasti (Lumbar Care Therapy)</option>
+            <option value="Janu Vasti (Knee Joint Therapy)">Janu Vasti (Knee Joint Therapy)</option>
+            <option value="Greeva Vasti (Cervical Care Therapy)">Greeva Vasti (Cervical Care Therapy)</option>
+            <option value="Mukha Lepam (Ayurvedic Herbal Facial)">Mukha Lepam (Ayurvedic Herbal Facial)</option>
+            <option value="Marma Energy Therapy">Marma Energy Therapy</option>
+            <option value="Ayurvedic Consultation & Assessment">Ayurvedic Consultation & Assessment</option>
+            <option value="Custom Ayurvedic Therapy">Custom Ayurvedic Therapy</option>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label form-label-required" for="work-start-time">Start Time</label>
+            <input type="time" id="work-start-time" class="form-input" value="09:00" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label form-label-required" for="work-end-time">End Time</label>
+            <input type="time" id="work-end-time" class="form-input" value="10:15" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="work-duration">Calculated Working Duration (Hours)</label>
+          <input type="number" id="work-duration" class="form-input" step="0.25" min="0.25" max="12" value="1.25" required />
+          <span style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.2rem;">Automatically computed from start and end time (or adjust manually).</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="work-notes">Clinical Notes / Herbal Oil Used</label>
+          <input type="text" id="work-notes" class="form-input" placeholder="e.g. Dhanwantharam thailam, steam bath" />
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem;">
+          <button type="button" id="btn-cancel-work" class="btn btn-outline">Cancel</button>
+          <button type="submit" class="btn btn-teal">
+            <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+            <span>Add Treatment Work</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/therapist-portal.js"></script>
+</body>
+</html>

@@ -27,13 +27,31 @@
 
     <!-- Body -->
     <div class="auth-body">
+      <!-- Portal Toggle Bar -->
+      <div class="portal-toggle-bar">
+        <button type="button" id="portal-toggle-desk" class="portal-toggle-pill active">
+          <i data-lucide="building-2" style="width: 15px; height: 15px;"></i>
+          <span>Front Desk & Admin</span>
+        </button>
+        <button type="button" id="portal-toggle-therapist" class="portal-toggle-pill">
+          <i data-lucide="heart-pulse" style="width: 15px; height: 15px;"></i>
+          <span>Therapist Portal</span>
+        </button>
+      </div>
+
+      <!-- Portal Mode Banner -->
+      <div id="portal-banner" style="margin-bottom: 1.15rem; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.8125rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; background: var(--forest-50); color: var(--forest-900); border: 1px solid var(--forest-200);">
+        <i data-lucide="shield-check" id="portal-banner-icon" style="width: 16px; height: 16px; color: var(--forest-600); flex-shrink: 0;"></i>
+        <span id="portal-banner-text">Reception & Administrative Operations</span>
+      </div>
+
       <!-- Mode Tabs -->
       <div style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.25rem;">
         <button id="tab-signin" class="filter-tab active" style="flex: 1; padding: 0.5rem; text-align: center; border-radius: 6px 6px 0 0;">
           Sign In
         </button>
         <button id="tab-register" class="filter-tab" style="flex: 1; padding: 0.5rem; text-align: center; border-radius: 6px 6px 0 0;">
-          Register Team
+          <span id="tab-register-label">Register Team</span>
         </button>
       </div>
 
@@ -42,7 +60,7 @@
         <div class="form-group">
           <label class="form-label form-label-required" for="signin-email">Email Address</label>
           <div style="position: relative;">
-            <input type="email" id="signin-email" class="form-input" style="width: 100%; padding-left: 2.25rem;" placeholder="e.g. admin@ayuryoga.example.com" required />
+            <input type="email" id="signin-email" class="form-input" style="width: 100%; padding-left: 2.25rem;" placeholder="admin@ayuryoga.example.com" required />
             <i data-lucide="mail" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--slate-400);"></i>
           </div>
         </div>
@@ -57,7 +75,7 @@
 
         <button type="submit" id="btn-submit-signin" class="btn btn-primary" style="width: 100%; padding: 0.65rem;">
           <i data-lucide="log-in" style="width: 16px; height: 16px;"></i>
-          <span>Sign In to AyurDesk</span>
+          <span id="btn-submit-signin-text">Sign In to AyurDesk</span>
         </button>
       </form>
 
@@ -77,6 +95,7 @@
           <label class="form-label form-label-required" for="reg-role">System Role</label>
           <select id="reg-role" class="form-select">
             <option value="staff" selected>Staff Member (Operations)</option>
+            <option value="therapist">Ayurvedic Therapist</option>
             <option value="admin">Administrator / Owner</option>
           </select>
         </div>
@@ -92,34 +111,57 @@
         </button>
       </form>
 
-      <!-- Quick Demo Access Section -->
-      <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
+      <!-- 1-Click Demo Access Section: Front Desk Profiles -->
+      <div id="demo-profiles-desk" style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
         <div style="font-size: 0.75rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.65rem;">
-          1-Click Demo Profiles
+          1-Click Demo Profiles (Desk & Admin)
         </div>
 
         <div class="demo-account-chip" onclick="quickLogin('admin')">
           <div>
             <strong style="color: var(--forest-900);">Owner / Administrator</strong>
-            <div style="color: var(--slate-500); font-size: 0.6875rem;">admin@ayuryoga.example.com</div>
+            <div style="color: var(--slate-500); font-size: 0.6875rem;">admin@ayuryoga.example.com • Pass: ChangeMe123!</div>
           </div>
           <span class="badge badge-admin">Admin</span>
         </div>
 
         <div class="demo-account-chip" onclick="quickLogin('shilpa')">
           <div>
-            <strong style="color: var(--forest-900);">Shilpa (Staff)</strong>
-            <div style="color: var(--slate-500); font-size: 0.6875rem;">shilpa@ayuryoga.example.com</div>
+            <strong style="color: var(--forest-900);">Shilpa (Reception Staff)</strong>
+            <div style="color: var(--slate-500); font-size: 0.6875rem;">shilpa@ayuryoga.example.com • Pass: ChangeMe123!</div>
           </div>
           <span class="badge badge-staff">Staff</span>
         </div>
 
         <div class="demo-account-chip" onclick="quickLogin('gokul')">
           <div>
-            <strong style="color: var(--forest-900);">Gokul (Staff)</strong>
-            <div style="color: var(--slate-500); font-size: 0.6875rem;">gokul@ayuryoga.example.com</div>
+            <strong style="color: var(--forest-900);">Gokul (Reception Staff)</strong>
+            <div style="color: var(--slate-500); font-size: 0.6875rem;">gokul@ayuryoga.example.com • Pass: ChangeMe123!</div>
           </div>
           <span class="badge badge-staff">Staff</span>
+        </div>
+      </div>
+
+      <!-- 1-Click Demo Access Section: Therapist Profiles -->
+      <div id="demo-profiles-therapist" style="display: none; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--forest-700); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.65rem;">
+          1-Click Demo Profiles (Ayurvedic Therapists)
+        </div>
+
+        <div class="demo-account-chip" style="border-left: 3px solid var(--forest-600);" onclick="quickLogin('vishnu')">
+          <div>
+            <strong style="color: var(--forest-900);">Dr. Vishnu (Senior Therapist)</strong>
+            <div style="color: var(--slate-600); font-size: 0.6875rem;">vishnu@ayuryoga.com • Password: @Ayuryoga2026</div>
+          </div>
+          <span class="badge badge-teal">Therapist</span>
+        </div>
+
+        <div class="demo-account-chip" style="border-left: 3px solid var(--forest-500);" onclick="quickLogin('priya')">
+          <div>
+            <strong style="color: var(--forest-900);">Priya Nair (Ayurvedic Therapist)</strong>
+            <div style="color: var(--slate-600); font-size: 0.6875rem;">priya@ayuryoga.com • Password: @Ayuryoga2026</div>
+          </div>
+          <span class="badge badge-teal">Therapist</span>
         </div>
       </div>
     </div>

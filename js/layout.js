@@ -10,18 +10,28 @@ function initAppLayout(activePageKey) {
   // 1. Render Sidebar
   const sidebarContainer = document.getElementById('app-sidebar');
   if (sidebarContainer) {
-    const navItems = [
-      { key: 'dashboard', href: 'index.html', label: 'Dashboard', icon: 'layout-dashboard' },
-      { key: 'daily-entry', href: 'daily-entry.html', label: 'Add Daily Report', icon: 'plus-circle' },
-      { key: 'records', href: 'records.html', label: 'All Records', icon: 'table-properties' },
-      { key: 'analytics', href: 'analytics.html', label: 'Analytics', icon: 'bar-chart-3' },
-      // Admin Items
-      { key: 'reports', href: 'reports.html', label: 'Reports Export', icon: 'file-spreadsheet', adminOnly: true },
-      { key: 'users', href: 'users.html', label: 'User Management', icon: 'users', adminOnly: true },
-      { key: 'audit-logs', href: 'audit-logs.html', label: 'Audit Logs', icon: 'history', adminOnly: true },
-      // General
-      { key: 'settings', href: 'settings.html', label: 'Settings', icon: 'settings' },
-    ];
+    let navItems = [];
+
+    if (user?.role === 'therapist') {
+      navItems = [
+        { key: 'therapist-portal', href: 'therapist-portal.html', label: 'Therapist Duty & Works', icon: 'heart-pulse' },
+        { key: 'settings', href: 'settings.html', label: 'Settings', icon: 'settings' },
+      ];
+    } else {
+      navItems = [
+        { key: 'dashboard', href: 'index.html', label: 'Dashboard', icon: 'layout-dashboard' },
+        { key: 'daily-entry', href: 'daily-entry.html', label: 'Add Daily Report', icon: 'plus-circle' },
+        { key: 'records', href: 'records.html', label: 'All Records', icon: 'table-properties' },
+        { key: 'analytics', href: 'analytics.html', label: 'Analytics', icon: 'bar-chart-3' },
+        // Admin Items
+        { key: 'reports', href: 'reports.html', label: 'Reception Reports', icon: 'file-spreadsheet', adminOnly: true },
+        { key: 'therapist-reports', href: 'therapist-reports.html', label: 'Therapist Reports', icon: 'stethoscope', adminOnly: true },
+        { key: 'users', href: 'users.html', label: 'User Management', icon: 'users', adminOnly: true },
+        { key: 'audit-logs', href: 'audit-logs.html', label: 'Audit Logs', icon: 'history', adminOnly: true },
+        // General
+        { key: 'settings', href: 'settings.html', label: 'Settings', icon: 'settings' },
+      ];
+    }
 
     let navHtml = `
       <div class="sidebar-header">
@@ -35,13 +45,13 @@ function initAppLayout(activePageKey) {
       </div>
 
       <nav class="sidebar-nav">
-        <div class="nav-section-label">Operations</div>
+        <div class="nav-section-label">${user?.role === 'therapist' ? 'Therapist Desk' : 'Operations'}</div>
     `;
 
     navItems.forEach((item, index) => {
       if (item.adminOnly && !isAdmin) return; // Hide admin pages for staff
 
-      if (index === 4 && isAdmin) {
+      if (item.key === 'reports' && isAdmin) {
         navHtml += `<div class="nav-section-label" style="margin-top: 0.75rem;">Administration</div>`;
       } else if (item.key === 'settings') {
         navHtml += `<div class="nav-section-label" style="margin-top: 0.75rem;">System</div>`;
@@ -108,6 +118,7 @@ function initAppLayout(activePageKey) {
           <span style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600; margin-right: 0.15rem;">Shift:</span>
           <button class="switch-pill ${user?.email?.includes('shilpa') ? 'active' : ''}" onclick="window.authManager.switchDemoUser('shilpa')">Shilpa</button>
           <button class="switch-pill ${user?.email?.includes('gokul') ? 'active' : ''}" onclick="window.authManager.switchDemoUser('gokul')">Gokul</button>
+          <button class="switch-pill ${user?.role === 'therapist' ? 'active' : ''}" onclick="window.authManager.switchDemoUser('vishnu')">Vishnu</button>
           <button class="switch-pill ${isAdmin ? 'active-admin' : ''}" onclick="window.authManager.switchDemoUser('admin')">Admin</button>
         </div>
         <div class="clock-pill">

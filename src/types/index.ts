@@ -3,7 +3,7 @@
 // Organization: Ayuryoga International
 // ====================================================================
 
-export type UserRole = 'admin' | 'staff';
+export type UserRole = 'admin' | 'staff' | 'therapist';
 
 export interface Profile {
   id: string;
@@ -13,6 +13,42 @@ export interface Profile {
   must_change_password: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface TherapistWork {
+  id: string;
+  patient_name: string;
+  treatment_type: string;
+  start_time: string;
+  end_time: string;
+  duration_hours: number;
+  notes?: string;
+}
+
+export interface TherapistAttendance {
+  id: string;
+  therapist_id: string;
+  therapist_name: string;
+  therapist_email: string;
+  record_date: string;
+  is_off_day: boolean;
+  off_day_reason?: string | null;
+  check_in_1?: string | null;
+  check_out_1?: string | null;
+  check_in_2?: string | null;
+  check_out_2?: string | null;
+  shift_1_hours: number;
+  shift_2_hours: number;
+  total_working_hours: number;
+  regular_hours: number;
+  overtime_hours: number;
+  is_overtime: boolean;
+  overtime_rate: number; // 75 MUR
+  overtime_salary: number;
+  works_count: number;
+  total_treatment_hours: number;
+  works?: TherapistWork[];
+  updated_at?: string;
 }
 
 export interface DailyReport {
