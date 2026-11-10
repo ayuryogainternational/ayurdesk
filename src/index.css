@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --color-forest-50: #f2f7f6;
+  --color-forest-100: #ddece9;
+  --color-forest-200: #bddad5;
+  --color-forest-300: #91c0b8;
+  --color-forest-400: #64a197;
+  --color-forest-500: #44847a;
+  --color-forest-600: #23675B;
+  --color-forest-700: #1b5249;
+  --color-forest-800: #15423b;
+  --color-forest-900: #103B37;
+  --color-forest-950: #082321;
+
+  --color-teal-brand: #23675B;
+  --color-teal-light: #2d7d6f;
+  --color-teal-dark: #1a4e45;
+
+  --color-warm-50: #ffffff;
+  --color-warm-100: #F7F7EF;
+  --color-warm-200: #f0f0e4;
+  --color-warm-300: #e5e5d3;
+  --color-warm-400: #d1d1b7;
+}
+
+body {
+  background-color: #F7F7EF;
+  color: #1e293b;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* Custom styling for inputs and tables */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Subtle professional scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1eb;
+}
+::-webkit-scrollbar-thumb {
+  background: #c3d1ce;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #91c0b8;
+}
