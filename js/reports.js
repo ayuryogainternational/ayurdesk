@@ -27,9 +27,57 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-export-excel').addEventListener('click', handleExportExcel);
   document.getElementById('btn-export-pdf').addEventListener('click', handleExportPdf);
 
-  allReports = await window.dataStore.getReports();
+  // Setup Database Sync Refresh Button
+  const syncBtn = document.getElementById('btn-sync-reports');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', async () => {
+      syncBtn.disabled = true;
+      syncBtn.innerHTML = '<i data-lucide="refresh-cw" class="spin"></i><span>Syncing...</span>';
+      if (window.lucide) window.lucide.createIcons();
+      await refreshReportsData(true);
+      window.showToast('Database Synchronized', 'Loaded latest operational entries from reception desk.', 'success');
+      syncBtn.disabled = false;
+      syncBtn.innerHTML = '<i data-lucide="refresh-cw"></i><span>Sync Database</span>';
+      if (window.lucide) window.lucide.createIcons();
+    });
+  }
+
+  // Reactive listeners for instant real-time updates when staff saves or edits
+  window.addEventListener('ayurdesk:data-updated', async () => {
+    await refreshReportsData(false);
+  });
+  window.addEventListener('storage', async (e) => {
+    if (e.key === 'ayurdesk_reports_v2') {
+      await refreshReportsData(false);
+    }
+  });
+  if (typeof BroadcastChannel !== 'undefined') {
+    try {
+      const channel = new BroadcastChannel('ayurdesk_sync');
+      channel.onmessage = async () => {
+        await refreshReportsData(false);
+      };
+    } catch (e) {}
+  }
+
+  await refreshReportsData(false);
   updateScopeInputs();
 });
+
+async function refreshReportsData(forceRemote = false) {
+  allReports = await window.dataStore.getReports();
+
+  // If reports have dates newer than today, extend end date default so new entries are shown
+  if (allReports && allReports.length > 0) {
+    const latestDate = allReports[0].report_date;
+    const endDateEl = document.getElementById('report-end-date');
+    if (endDateEl && (!endDateEl.value || endDateEl.value < latestDate)) {
+      endDateEl.value = latestDate;
+    }
+  }
+
+  updateScopedRecords();
+}
 
 function updateScopeInputs() {
   const scope = document.getElementById('report-scope').value;

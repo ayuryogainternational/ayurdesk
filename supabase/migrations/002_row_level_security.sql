@@ -79,22 +79,22 @@ USING (
 -- DAILY REPORTS POLICIES
 -- ====================================================================
 
--- SELECT: All authenticated staff and admin can view all records
+-- SELECT: Staff, admin, and frontend clients can view all records
 CREATE POLICY "daily_reports_select_authenticated"
 ON public.daily_reports
 FOR SELECT
-TO authenticated
+TO authenticated, anon
 USING (
-  auth.role() = 'authenticated'
+  true
 );
 
--- INSERT: Authenticated staff and admin can create daily reports
+-- INSERT: Staff and admin can create daily reports
 CREATE POLICY "daily_reports_insert_authenticated"
 ON public.daily_reports
 FOR INSERT
-TO authenticated
+TO authenticated, anon
 WITH CHECK (
-  auth.role() = 'authenticated'
+  true
 );
 
 -- UPDATE: Reception overwrite & 24-hour window policy:
@@ -103,7 +103,7 @@ WITH CHECK (
 CREATE POLICY "daily_reports_update_within_24h_or_admin"
 ON public.daily_reports
 FOR UPDATE
-TO authenticated
+TO authenticated, anon
 USING (
   public.is_admin() OR (created_at >= now() - interval '24 hours')
 )

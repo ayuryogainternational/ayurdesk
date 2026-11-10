@@ -84,6 +84,39 @@ const STORAGE_KEYS = {
   USERS: 'ayurdesk_users_v2',
 };
 
+const USER_PROFILES_MAP = {
+  '36c696a3-bd86-46e2-8ff8-06bec48f37f4': { full_name: 'Owner / Administrator', role: 'admin' },
+  'ad5cf6a7-175e-4e41-a97a-a2621e1fe2df': { full_name: 'Shilpa', role: 'staff' },
+  'b110aeeb-dc4d-42d5-b1fb-6eb4dece1267': { full_name: 'Gokul', role: 'staff' },
+  'staff-1': { full_name: 'Shilpa', role: 'staff' },
+  'staff-2': { full_name: 'Gokul', role: 'staff' },
+  'admin-1': { full_name: 'Owner / Administrator', role: 'admin' },
+};
+
+function isUuid(str) {
+  return typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
+let syncChannel = null;
+if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+  try {
+    syncChannel = new BroadcastChannel('ayurdesk_sync');
+  } catch (e) {
+    // BroadcastChannel unsupported or blocked
+  }
+}
+
+function broadcastDataChange(type, payload) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('ayurdesk:data-updated', { detail: { type, payload } }));
+    if (syncChannel) {
+      try {
+        syncChannel.postMessage({ type, payload });
+      } catch (e) {}
+    }
+  }
+}
+
 class DataStore {
   constructor() {
     this.initStorage();
@@ -101,27 +134,52 @@ class DataStore {
     }
   }
 
-  // Get all reports sorted by report_date descending
+  // Get all reports sorted by report_date descending with intelligent sync
   async getReports() {
-    // If Supabase client configured, try remote fetch
+    const raw = localStorage.getItem(STORAGE_KEYS.REPORTS);
+    let localReports = raw ? JSON.parse(raw) : [...INITIAL_RECORDS];
+
+    // If Supabase client configured, try remote fetch and smart-merge
     if (window.supabaseClient) {
       try {
         const { data, error } = await window.supabaseClient
           .from('daily_reports')
           .select('*')
           .order('report_date', { ascending: false });
-        if (!error && data && data.length > 0) {
-          localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(data));
-          return data;
+
+        if (!error && Array.isArray(data)) {
+          const localByDate = new Map();
+          localReports.forEach((r) => localByDate.set(r.report_date, r));
+
+          data.forEach((remoteRow) => {
+            const existingLocal = localByDate.get(remoteRow.report_date);
+            const createdName =
+              existingLocal?.created_by_name ||
+              USER_PROFILES_MAP[remoteRow.created_by]?.full_name ||
+              (remoteRow.created_by ? 'Reception Staff' : 'Shilpa & Gokul');
+            const updatedName =
+              existingLocal?.updated_by_name ||
+              USER_PROFILES_MAP[remoteRow.updated_by]?.full_name ||
+              (remoteRow.updated_by ? 'Reception Staff' : null);
+
+            const merged = {
+              ...existingLocal,
+              ...remoteRow,
+              created_by_name: createdName,
+              updated_by_name: updatedName,
+            };
+            localByDate.set(remoteRow.report_date, merged);
+          });
+
+          localReports = Array.from(localByDate.values());
+          localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(localReports));
         }
       } catch (e) {
         console.warn('[AyurDesk] Supabase fetch fallback to local storage:', e);
       }
     }
 
-    const raw = localStorage.getItem(STORAGE_KEYS.REPORTS);
-    const reports = raw ? JSON.parse(raw) : [...INITIAL_RECORDS];
-    return reports.sort((a, b) => b.report_date.localeCompare(a.report_date));
+    return localReports.sort((a, b) => b.report_date.localeCompare(a.report_date));
   }
 
   async getReportById(id) {
@@ -177,84 +235,114 @@ class DataStore {
     return { canEdit: true };
   }
 
+  // Fast synchronous local update with immediate background database upsert
   async saveReport(reportData) {
     const user = window.authManager ? window.authManager.getCurrentUser() : null;
-    const reports = await this.getReports();
+    const raw = localStorage.getItem(STORAGE_KEYS.REPORTS);
+    const reports = raw ? JSON.parse(raw) : [...INITIAL_RECORDS];
 
     // Check if report with same date exists
     const existingIndex = reports.findIndex((r) => r.report_date === reportData.report_date);
+    let finalRecord = null;
+    const isNew = existingIndex < 0;
 
-    if (existingIndex >= 0) {
-      // Overwrite / Update existing daily report
+    if (!isNew) {
+      // Overwrite / Update existing daily report (Reception Handover Shilpa/Gokul)
       const oldRecord = reports[existingIndex];
       const check = this.canEditReport(oldRecord, user);
       if (!check.canEdit) {
         throw new Error(check.reason);
       }
 
-      const updated = {
+      finalRecord = {
         ...oldRecord,
         ...reportData,
         updated_by: user ? user.id : 'system',
         updated_by_name: user ? user.full_name : 'Reception Staff',
         updated_at: new Date().toISOString(),
       };
-      reports[existingIndex] = updated;
-      localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
+      reports[existingIndex] = finalRecord;
 
-      await this.addAuditLog('UPDATE', 'daily_reports', updated.id, oldRecord, updated, {
+      this.addAuditLog('UPDATE', 'daily_reports', finalRecord.id, oldRecord, finalRecord, {
         event: 'reception_overwrite',
         overwritten_by: user ? user.full_name : 'Reception Staff',
         modified_fields: Object.keys(reportData),
       });
-
-      // Try Supabase sync
-      if (window.supabaseClient) {
-        try {
-          await window.supabaseClient
-            .from('daily_reports')
-            .update(reportData)
-            .eq('id', updated.id);
-        } catch (e) {
-          console.warn('[AyurDesk] Supabase update notice:', e);
-        }
-      }
-
-      return updated;
     } else {
       // Insert new daily report
-      const newRecord = {
+      finalRecord = {
         id: 'rep-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
         ...reportData,
         created_by: user ? user.id : 'system',
         created_by_name: user ? user.full_name : 'Reception Staff',
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
-      reports.unshift(newRecord);
-      localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
+      reports.unshift(finalRecord);
 
-      await this.addAuditLog('INSERT', 'daily_reports', newRecord.id, null, newRecord, {
+      this.addAuditLog('INSERT', 'daily_reports', finalRecord.id, null, finalRecord, {
         event: 'created',
         created_by: user ? user.full_name : 'Reception Staff',
       });
+    }
 
-      // Try Supabase sync
-      if (window.supabaseClient) {
-        try {
-          await window.supabaseClient.from('daily_reports').insert([newRecord]);
-        } catch (e) {
-          console.warn('[AyurDesk] Supabase insert notice:', e);
+    // 1. Instant local persistence & event broadcast (<1ms)
+    localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
+    broadcastDataChange('SAVE_REPORT', finalRecord);
+
+    // 2. Fast background database upsert to Supabase
+    if (window.supabaseClient) {
+      const dbPayload = {
+        report_date: finalRecord.report_date,
+        total_enquiries: finalRecord.total_enquiries != null ? Number(finalRecord.total_enquiries) : null,
+        total_responses: finalRecord.total_responses != null ? Number(finalRecord.total_responses) : null,
+        total_confirmations: finalRecord.total_confirmations != null ? Number(finalRecord.total_confirmations) : null,
+        total_bookings: finalRecord.total_bookings != null ? Number(finalRecord.total_bookings) : null,
+        tomorrow_bookings: finalRecord.tomorrow_bookings != null ? Number(finalRecord.tomorrow_bookings) : null,
+        whatsapp_calls_messages: finalRecord.whatsapp_calls_messages != null ? Number(finalRecord.whatsapp_calls_messages) : null,
+        normal_calls: finalRecord.normal_calls != null ? Number(finalRecord.normal_calls) : null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (user && isUuid(user.id)) {
+        if (isNew) {
+          dbPayload.created_by = user.id;
         }
+        dbPayload.updated_by = user.id;
       }
 
-      return newRecord;
+      // Upsert by report_date
+      window.supabaseClient
+        .from('daily_reports')
+        .upsert([dbPayload], { onConflict: 'report_date' })
+        .select()
+        .then(({ data, error }) => {
+          if (!error && data && data[0]) {
+            // Update local ID if remote UUID generated
+            const freshRaw = localStorage.getItem(STORAGE_KEYS.REPORTS);
+            if (freshRaw) {
+              const freshReports = JSON.parse(freshRaw);
+              const idx = freshReports.findIndex((r) => r.report_date === finalRecord.report_date);
+              if (idx >= 0 && data[0].id) {
+                freshReports[idx].id = data[0].id;
+                localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(freshReports));
+              }
+            }
+          } else if (error) {
+            console.warn('[AyurDesk] Supabase upsert notice:', error);
+          }
+        })
+        .catch((e) => console.warn('[AyurDesk] Supabase network notice:', e));
     }
+
+    return finalRecord;
   }
 
   async updateReport(id, patch) {
     const user = window.authManager ? window.authManager.getCurrentUser() : null;
-    const reports = await this.getReports();
-    const index = reports.findIndex((r) => r.id === id);
+    const raw = localStorage.getItem(STORAGE_KEYS.REPORTS);
+    const reports = raw ? JSON.parse(raw) : [...INITIAL_RECORDS];
+    const index = reports.findIndex((r) => r.id === id || r.report_date === patch.report_date);
     if (index === -1) throw new Error('Record not found');
 
     const oldRecord = reports[index];
@@ -272,42 +360,61 @@ class DataStore {
     };
     reports[index] = updated;
     localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
+    broadcastDataChange('UPDATE_REPORT', updated);
 
-    await this.addAuditLog('UPDATE', 'daily_reports', id, oldRecord, updated, {
+    this.addAuditLog('UPDATE', 'daily_reports', id, oldRecord, updated, {
       ...patch,
       modified_by: user ? user.full_name : 'Reception Staff',
     });
 
     if (window.supabaseClient) {
-      try {
-        await window.supabaseClient.from('daily_reports').update(patch).eq('id', id);
-      } catch (e) {
-        console.warn('[AyurDesk] Supabase update notice:', e);
+      const dbPayload = {
+        report_date: updated.report_date,
+        total_enquiries: updated.total_enquiries != null ? Number(updated.total_enquiries) : null,
+        total_responses: updated.total_responses != null ? Number(updated.total_responses) : null,
+        total_confirmations: updated.total_confirmations != null ? Number(updated.total_confirmations) : null,
+        total_bookings: updated.total_bookings != null ? Number(updated.total_bookings) : null,
+        tomorrow_bookings: updated.tomorrow_bookings != null ? Number(updated.tomorrow_bookings) : null,
+        whatsapp_calls_messages: updated.whatsapp_calls_messages != null ? Number(updated.whatsapp_calls_messages) : null,
+        normal_calls: updated.normal_calls != null ? Number(updated.normal_calls) : null,
+        updated_at: new Date().toISOString(),
+      };
+      if (user && isUuid(user.id)) {
+        dbPayload.updated_by = user.id;
       }
+
+      window.supabaseClient
+        .from('daily_reports')
+        .upsert([dbPayload], { onConflict: 'report_date' })
+        .then(() => {})
+        .catch((e) => console.warn('[AyurDesk] Supabase update notice:', e));
     }
 
     return updated;
   }
 
   async deleteReport(id) {
-    const reports = await this.getReports();
+    const raw = localStorage.getItem(STORAGE_KEYS.REPORTS);
+    const reports = raw ? JSON.parse(raw) : [...INITIAL_RECORDS];
     const index = reports.findIndex((r) => r.id === id);
     if (index === -1) throw new Error('Record not found');
 
     const deletedRecord = reports[index];
     reports.splice(index, 1);
     localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
+    broadcastDataChange('DELETE_REPORT', deletedRecord);
 
-    await this.addAuditLog('DELETE', 'daily_reports', id, deletedRecord, null, {
+    this.addAuditLog('DELETE', 'daily_reports', id, deletedRecord, null, {
       event: 'deleted',
     });
 
     if (window.supabaseClient) {
-      try {
-        await window.supabaseClient.from('daily_reports').delete().eq('id', id);
-      } catch (e) {
-        console.warn('[AyurDesk] Supabase delete notice:', e);
-      }
+      window.supabaseClient
+        .from('daily_reports')
+        .delete()
+        .eq('report_date', deletedRecord.report_date)
+        .then(() => {})
+        .catch((e) => console.warn('[AyurDesk] Supabase delete notice:', e));
     }
 
     return true;

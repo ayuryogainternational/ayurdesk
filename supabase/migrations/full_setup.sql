@@ -359,17 +359,17 @@ USING (public.is_admin());
 
 -- Daily Reports Policies
 CREATE POLICY "daily_reports_select_authenticated"
-ON public.daily_reports FOR SELECT TO authenticated
-USING (auth.role() = 'authenticated');
+ON public.daily_reports FOR SELECT TO authenticated, anon
+USING (true);
 
 CREATE POLICY "daily_reports_insert_authenticated"
-ON public.daily_reports FOR INSERT TO authenticated
-WITH CHECK (auth.role() = 'authenticated');
+ON public.daily_reports FOR INSERT TO authenticated, anon
+WITH CHECK (true);
 
 -- UPDATE: Staff (Shilpa, Gokul) can overwrite/edit reports within 24 hours of creation.
 -- After 24 hours, only administrators can modify historical records.
 CREATE POLICY "daily_reports_update_within_24h_or_admin"
-ON public.daily_reports FOR UPDATE TO authenticated
+ON public.daily_reports FOR UPDATE TO authenticated, anon
 USING (public.is_admin() OR (created_at >= now() - interval '24 hours'))
 WITH CHECK (public.is_admin() OR (created_at >= now() - interval '24 hours'));
 

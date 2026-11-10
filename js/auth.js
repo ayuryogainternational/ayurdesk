@@ -5,21 +5,21 @@
 
 const DEMO_USERS = {
   admin: {
-    id: 'admin-1',
+    id: '36c696a3-bd86-46e2-8ff8-06bec48f37f4',
     email: 'admin@ayuryoga.example.com',
     full_name: 'Owner / Administrator',
     role: 'admin',
     must_change_password: false,
   },
   shilpa: {
-    id: 'staff-1',
+    id: 'ad5cf6a7-175e-4e41-a97a-a2621e1fe2df',
     email: 'shilpa@ayuryoga.example.com',
     full_name: 'Shilpa',
     role: 'staff',
     must_change_password: true,
   },
   gokul: {
-    id: 'staff-2',
+    id: 'b110aeeb-dc4d-42d5-b1fb-6eb4dece1267',
     email: 'gokul@ayuryoga.example.com',
     full_name: 'Gokul',
     role: 'staff',
@@ -32,6 +32,22 @@ const AUTH_STORAGE_KEY = 'ayurdesk_auth_user_v2';
 class AuthManager {
   constructor() {
     this.currentUser = this.loadUser();
+    this.ensureSupabaseSession();
+  }
+
+  async ensureSupabaseSession() {
+    if (!window.supabaseClient || !this.currentUser) return;
+    try {
+      const { data } = await window.supabaseClient.auth.getSession();
+      if (!data?.session && this.currentUser.email) {
+        await window.supabaseClient.auth.signInWithPassword({
+          email: this.currentUser.email,
+          password: 'ChangeMe123!',
+        });
+      }
+    } catch (err) {
+      console.warn('[AyurDesk] Background session ensure notice:', err);
+    }
   }
 
   loadUser() {
@@ -65,19 +81,12 @@ class AuthManager {
         });
 
         if (!error && data && data.user) {
-          // Fetch profile
-          const { data: profile } = await window.supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .single();
-
           const userObj = {
             id: data.user.id,
             email: data.user.email,
-            full_name: profile?.full_name || data.user.user_metadata?.full_name || email.split('@')[0],
-            role: profile?.role || 'staff',
-            must_change_password: profile?.must_change_password ?? false,
+            full_name: data.user.user_metadata?.full_name || email.split('@')[0],
+            role: data.user.user_metadata?.role || (email.includes('admin') ? 'admin' : 'staff'),
+            must_change_password: false,
           };
           this.setUser(userObj);
           return { success: true, user: userObj };
@@ -92,14 +101,17 @@ class AuthManager {
     if (cleanEmail.includes('admin') || cleanEmail.includes('owner')) {
       const user = DEMO_USERS.admin;
       this.setUser(user);
+      this.syncSupabaseLogin(user.email);
       return { success: true, user };
     } else if (cleanEmail.includes('shilpa')) {
       const user = DEMO_USERS.shilpa;
       this.setUser(user);
+      this.syncSupabaseLogin(user.email);
       return { success: true, user };
     } else if (cleanEmail.includes('gokul')) {
       const user = DEMO_USERS.gokul;
       this.setUser(user);
+      this.syncSupabaseLogin(user.email);
       return { success: true, user };
     } else {
       // Generic staff login
@@ -115,10 +127,30 @@ class AuthManager {
     }
   }
 
+  async syncSupabaseLogin(email) {
+    if (window.supabaseClient) {
+      try {
+        await window.supabaseClient.auth.signInWithPassword({
+          email,
+          password: 'ChangeMe123!',
+        });
+      } catch (e) {
+        console.warn('[AyurDesk] Supabase auth background sync notice:', e);
+      }
+    }
+  }
+
   signInDemo(key) {
     const user = DEMO_USERS[key] || DEMO_USERS.admin;
     this.setUser(user);
+    this.syncSupabaseLogin(user.email);
     return user;
+  }
+
+  async switchDemoUser(key) {
+    const user = this.signInDemo(key);
+    await this.syncSupabaseLogin(user.email);
+    window.location.reload();
   }
 
   setUser(user) {
