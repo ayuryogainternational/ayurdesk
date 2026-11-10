@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Daily Report | AyurDesk - Ayuryoga International</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- CDN Dependencies -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <div class="main-wrapper">
+      <header id="app-header" class="top-header"></header>
+
+      <main class="page-container">
+        <div class="page-header">
+          <h1 class="page-title">Record Daily Operations</h1>
+          <p class="page-desc">Submit official daily operational statistics for Ayuryoga International</p>
+        </div>
+
+        <form id="daily-entry-form" style="max-width: 900px; display: flex; flex-direction: column; gap: 1.5rem;">
+          <!-- Section 1: Date & Inbound Demand -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="calendar" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Date & Demand Ingestion
+                </div>
+                <div class="card-desc">Specify report date in Indian Ocean / Mauritius local time</div>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid-2col">
+              <div class="form-group">
+                <label class="form-label form-label-required" for="report_date">Report Date</label>
+                <input type="date" id="report_date" class="form-input" required />
+                <span class="form-hint">Defaults to current date in Mauritius</span>
+                <span class="form-error" id="err-report_date"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="total_enquiries">Total Inquiries Received</label>
+                <input type="number" id="total_enquiries" class="form-input" min="0" placeholder="e.g. 35" />
+                <span class="form-hint">Leave blank if unrecorded</span>
+                <span class="form-error" id="err-total_enquiries"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="total_responses">Total Responses Given</label>
+                <input type="number" id="total_responses" class="form-input" min="0" placeholder="e.g. 35" />
+                <span class="form-hint">Must not exceed total inquiries</span>
+                <span class="form-error" id="err-total_responses"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="total_confirmations">Total Confirmations</label>
+                <input type="number" id="total_confirmations" class="form-input" min="0" placeholder="e.g. 15" />
+                <span class="form-hint">Finalized confirmation contacts</span>
+                <span class="form-error" id="err-total_confirmations"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Bookings & Forward Capacity -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="bookmark-check" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Bookings & Forward Operations
+                </div>
+                <div class="card-desc">Operational conversion and forward day schedule</div>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid-2col">
+              <div class="form-group">
+                <label class="form-label" for="total_bookings">Total Bookings (Today)</label>
+                <input type="number" id="total_bookings" class="form-input" min="0" placeholder="e.g. 12" />
+                <span class="form-hint">Completed bookings confirmed today</span>
+                <span class="form-error" id="err-total_bookings"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="tomorrow_bookings">Tomorrow's Expected Bookings</label>
+                <input type="number" id="tomorrow_bookings" class="form-input" min="0" placeholder="e.g. 20" />
+                <span class="form-hint">Forward schedule capacity</span>
+                <span class="form-error" id="err-tomorrow_bookings"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Communications Breakdown -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="phone-call" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Telephony & Messaging Metrics
+                </div>
+                <div class="card-desc">Volume across communication channels</div>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid-2col">
+              <div class="form-group">
+                <label class="form-label" for="whatsapp_calls_messages">WhatsApp Messages & Calls</label>
+                <input type="number" id="whatsapp_calls_messages" class="form-input" min="0" placeholder="e.g. 28" />
+                <span class="form-hint">Direct WhatsApp inquiries and calls</span>
+                <span class="form-error" id="err-whatsapp_calls_messages"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="normal_calls">Standard Telephone Calls</label>
+                <input type="number" id="normal_calls" class="form-input" min="0" placeholder="e.g. 14" />
+                <span class="form-hint">Cellular or landline calls</span>
+                <span class="form-error" id="err-normal_calls"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Rate Preview Bar -->
+          <div class="card" style="background-color: var(--forest-50); border-color: var(--forest-200);">
+            <div style="display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 1rem; text-align: center;">
+              <div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--forest-700); text-transform: uppercase;">Response Rate</div>
+                <div id="live-response-rate" style="font-size: 1.25rem; font-weight: 800; color: var(--forest-900);">--%</div>
+              </div>
+              <div style="width: 1px; height: 32px; background-color: var(--forest-200);"></div>
+              <div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--forest-700); text-transform: uppercase;">Booking Conversion</div>
+                <div id="live-conversion-rate" style="font-size: 1.25rem; font-weight: 800; color: var(--forest-900);">--%</div>
+              </div>
+              <div style="width: 1px; height: 32px; background-color: var(--forest-200);"></div>
+              <div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--forest-700); text-transform: uppercase;">Total Communications</div>
+                <div id="live-total-comms" style="font-size: 1.25rem; font-weight: 800; color: var(--forest-900);">--</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Buttons -->
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 1rem;">
+            <button type="button" id="btn-reset-form" class="btn btn-secondary">
+              <i data-lucide="rotate-ccw" style="width: 16px; height: 16px;"></i>
+              <span>Clear Form</span>
+            </button>
+
+            <button type="submit" id="btn-submit-entry" class="btn btn-primary btn-lg">
+              <i data-lucide="save" style="width: 18px; height: 18px;"></i>
+              <span>Save Daily Record</span>
+            </button>
+          </div>
+        </form>
+      </main>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirm Submission</h3>
+        <button type="button" class="modal-close-btn" onclick="closeConfirmModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.875rem; color: var(--slate-600); margin-bottom: 1rem;">
+          You are about to record the daily operations for:
+        </p>
+        <div style="background-color: var(--warm-100); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8125rem;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Report Date:</span>
+            <strong id="confirm-date"></strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Inquiries Received:</span>
+            <strong id="confirm-enquiries"></strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Responses Provided:</span>
+            <strong id="confirm-responses"></strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Confirmed Bookings:</span>
+            <strong id="confirm-bookings"></strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Tomorrow's Expected:</span>
+            <strong id="confirm-tomorrow"></strong>
+          </div>
+        </div>
+        <p style="font-size: 0.75rem; color: var(--slate-400); margin-top: 0.75rem;">
+          This submission will be recorded in the official Ayuryoga International audit ledger.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+        <button type="button" id="btn-confirm-save" class="btn btn-primary">Confirm & Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/daily-entry.js"></script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports Export | AyurDesk - Ayuryoga International</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- CDN Dependencies -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <div class="main-wrapper">
+      <header id="app-header" class="top-header"></header>
+
+      <main class="page-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <h1 class="page-title">Reports Export Center</h1>
+            <span class="badge badge-admin">Admin Only</span>
+          </div>
+          <p class="page-desc">Generate official, branded operational reports in Excel (.xlsx) and PDF (.pdf) formats</p>
+        </div>
+
+        <!-- Scope Selection Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i data-lucide="sliders" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                Select Report Scope & Period
+              </div>
+              <div class="card-desc">Define time boundaries and filtering criteria for the generated document</div>
+            </div>
+          </div>
+
+          <div class="form-grid form-grid-2col">
+            <div class="form-group">
+              <label class="form-label" for="report-scope">Report Scope</label>
+              <select id="report-scope" class="form-select">
+                <option value="range" selected>Custom Date Range</option>
+                <option value="single">Single Day</option>
+                <option value="weekly">Weekly (Last 7 Days)</option>
+                <option value="monthly">Monthly (Last 30 Days)</option>
+                <option value="all">All Available Historical Records</option>
+              </select>
+            </div>
+
+            <!-- Single Date Group -->
+            <div class="form-group" id="scope-single-group" style="display: none;">
+              <label class="form-label" for="report-single-date">Target Date</label>
+              <input type="date" id="report-single-date" class="form-input" />
+            </div>
+
+            <!-- Date Range Group -->
+            <div class="form-group" id="scope-range-group" style="display: flex; flex-direction: row; gap: 0.75rem;">
+              <div style="flex: 1;">
+                <label class="form-label" for="report-start-date">Start Date</label>
+                <input type="date" id="report-start-date" class="form-input" value="2026-10-25" />
+              </div>
+              <div style="flex: 1;">
+                <label class="form-label" for="report-end-date">End Date</label>
+                <input type="date" id="report-end-date" class="form-input" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selection Summary & Export Actions -->
+        <div class="card" style="background-color: var(--forest-50); border-color: var(--forest-200);">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.25rem;">
+            <div>
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--forest-700); text-transform: uppercase;">
+                Active Export Scope
+              </div>
+              <div id="export-summary-text" style="font-size: 1.125rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">
+                Date Range: 2026-10-25 to Today
+              </div>
+              <div id="export-metrics-text" style="font-size: 0.75rem; color: var(--slate-600); margin-top: 0.25rem;">
+                Records: 0 | Inquiries: 0 | Bookings: 0
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+              <button type="button" id="btn-export-excel" class="btn btn-teal">
+                <i data-lucide="file-spreadsheet" style="width: 16px; height: 16px;"></i>
+                <span>Download Excel (.xlsx)</span>
+              </button>
+
+              <button type="button" id="btn-export-pdf" class="btn btn-primary">
+                <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+                <span>Download PDF (.pdf)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scoped Records Preview Table -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i data-lucide="eye" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                Document Preview Ledger
+              </div>
+              <div class="card-desc">Review records that will be included in the exported document</div>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th class="numeric">Inquiries</th>
+                  <th class="numeric">Responses</th>
+                  <th class="numeric">Turnaround</th>
+                  <th class="numeric">Bookings</th>
+                  <th class="numeric">Confirmations</th>
+                  <th class="numeric">WhatsApp</th>
+                  <th class="numeric">Calls</th>
+                </tr>
+              </thead>
+              <tbody id="export-preview-body">
+                <tr><td colspan="8" style="text-align: center; padding: 2rem;">Loading preview...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/reports.js"></script>
+</body>
+</html>

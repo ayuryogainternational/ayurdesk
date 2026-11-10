@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>All Records | AyurDesk - Ayuryoga International</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- CDN Dependencies -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <div class="main-wrapper">
+      <header id="app-header" class="top-header"></header>
+
+      <main class="page-container">
+        <!-- Page Header -->
+        <div class="page-header-row">
+          <div class="page-header">
+            <h1 class="page-title">Daily Operational Records</h1>
+            <p class="page-desc">Complete ledger of daily inquiries, responses, bookings, and communications</p>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <a href="daily-entry.html" class="btn btn-primary">
+              <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>
+              <span>Add Daily Record</span>
+            </a>
+
+            <a href="reports.html" id="records-export-btn" class="btn btn-secondary" style="display: none;">
+              <i data-lucide="file-spreadsheet" style="width: 16px; height: 16px;"></i>
+              <span>Export Reports</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Anomaly Banner -->
+        <div id="records-anomaly-banner" class="anomaly-alert" style="display: none;">
+          <div class="anomaly-alert-left">
+            <i data-lucide="alert-triangle" class="anomaly-alert-icon"></i>
+            <div>
+              <div class="anomaly-alert-title">Date Anomaly Flagged (2027-10-26)</div>
+              <div class="anomaly-alert-msg">One historical record has year 2027 instead of 2026. This is tracked in the audit trail.</div>
+            </div>
+          </div>
+          <button id="records-fix-anomaly-btn" class="btn btn-secondary btn-sm" style="background: #ffffff; border-color: #fde68a; color: #92400e;">
+            Resolve to 2026-10-26
+          </button>
+        </div>
+
+        <!-- Filter Card -->
+        <div class="card" style="padding: 1rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; flex: 1;">
+              <!-- Search Date -->
+              <div style="position: relative; min-width: 200px;">
+                <input type="text" id="filter-search" class="form-input" style="padding-left: 2rem; width: 100%;" placeholder="Search date (e.g. 2026-10)..." />
+                <i data-lucide="search" style="position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--slate-400);"></i>
+              </div>
+
+              <!-- From Date -->
+              <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <span style="font-size: 0.75rem; font-weight: 600; color: var(--slate-500);">From:</span>
+                <input type="date" id="filter-from-date" class="form-input" style="padding: 0.4rem 0.5rem; font-size: 0.75rem;" />
+              </div>
+
+              <!-- To Date -->
+              <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <span style="font-size: 0.75rem; font-weight: 600; color: var(--slate-500);">To:</span>
+                <input type="date" id="filter-to-date" class="form-input" style="padding: 0.4rem 0.5rem; font-size: 0.75rem;" />
+              </div>
+
+              <button type="button" id="btn-clear-filters" class="btn btn-secondary btn-sm">
+                Clear Filters
+              </button>
+            </div>
+
+            <div style="font-size: 0.8125rem; color: var(--slate-500);">
+              Showing <strong id="filter-count">0</strong> records
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Card -->
+        <div class="card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th class="numeric">Inquiries</th>
+                  <th class="numeric">Responses</th>
+                  <th class="numeric">Turnaround</th>
+                  <th class="numeric">Bookings</th>
+                  <th class="numeric">Conversion</th>
+                  <th class="numeric">Tomorrow</th>
+                  <th class="numeric">WhatsApp</th>
+                  <th class="numeric">Normal Calls</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="records-table-body">
+                <tr><td colspan="10" style="text-align: center; padding: 2rem;">Loading operations records...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.75rem;">
+            <div style="font-size: 0.75rem; color: var(--slate-500);">
+              Page <span id="current-page-num">1</span> of <span id="total-page-num">1</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <button type="button" id="btn-prev-page" class="btn btn-secondary btn-sm" disabled>Previous</button>
+              <button type="button" id="btn-next-page" class="btn btn-secondary btn-sm" disabled>Next</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Edit Record Modal -->
+  <div id="edit-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Operational Record</h3>
+        <button type="button" class="modal-close-btn" onclick="closeEditModal()">✕</button>
+      </div>
+      <form id="edit-record-form">
+        <input type="hidden" id="edit-record-id" />
+        <div class="modal-body">
+          <div class="form-grid form-grid-2col">
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label form-label-required" for="edit-date">Report Date</label>
+              <input type="date" id="edit-date" class="form-input" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="edit-enquiries">Total Inquiries</label>
+              <input type="number" id="edit-enquiries" class="form-input" min="0" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="edit-responses">Total Responses</label>
+              <input type="number" id="edit-responses" class="form-input" min="0" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="edit-confirmations">Confirmations</label>
+              <input type="number" id="edit-confirmations" class="form-input" min="0" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="edit-bookings">Confirmed Bookings</label>
+              <input type="number" id="edit-bookings" class="form-input" min="0" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="edit-tomorrow">Tomorrow Expected</label>
+              <input type="number" id="edit-tomorrow" class="form-input" min="0" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="edit-whatsapp">WhatsApp Messages/Calls</label>
+              <input type="number" id="edit-whatsapp" class="form-input" min="0" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="edit-normal">Normal Phone Calls</label>
+              <input type="number" id="edit-normal" class="form-input" min="0" />
+            </div>
+          </div>
+          <p style="font-size: 0.75rem; color: var(--slate-400); margin-top: 0.75rem;">
+            Any modifications will be recorded in the immutable audit ledger with your user credentials.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" id="btn-save-edit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Modal (Admin only) -->
+  <div id="delete-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: var(--danger-600);">Confirm Record Deletion</h3>
+        <button type="button" class="modal-close-btn" onclick="closeDeleteModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.875rem; color: var(--slate-700);">
+          Are you sure you want to delete the daily operational report for <strong id="delete-record-date"></strong>?
+        </p>
+        <p style="font-size: 0.75rem; color: var(--slate-500); margin-top: 0.5rem;">
+          This action will permanently delete the record. An audit entry will be created.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button type="button" id="btn-confirm-delete" class="btn btn-danger">Delete Record</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/records.js"></script>
+</body>
+</html>

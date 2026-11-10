@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audit Logs | AyurDesk - Ayuryoga International</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- CDN Dependencies -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <div class="main-wrapper">
+      <header id="app-header" class="top-header"></header>
+
+      <main class="page-container">
+        <!-- Page Header -->
+        <div class="page-header-row">
+          <div class="page-header">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <h1 class="page-title">Immutable Audit Trail</h1>
+              <span class="badge badge-admin">Admin Only</span>
+            </div>
+            <p class="page-desc">Complete cryptographic record of all operations modifications and changes</p>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <select id="filter-audit-action" class="form-select" style="font-size: 0.8125rem; padding: 0.45rem 0.75rem;">
+              <option value="all" selected>All Actions</option>
+              <option value="INSERT">INSERT</option>
+              <option value="UPDATE">UPDATE</option>
+              <option value="DELETE">DELETE</option>
+            </select>
+
+            <button type="button" id="btn-refresh-audit" class="btn btn-secondary btn-sm">
+              <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+              <span>Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Audit Table Card -->
+        <div class="card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp (Mauritius)</th>
+                  <th>Action</th>
+                  <th>Target Table</th>
+                  <th>Record Identifier</th>
+                  <th>Performed By</th>
+                  <th style="text-align: right;">Inspection</th>
+                </tr>
+              </thead>
+              <tbody id="audit-table-body">
+                <tr><td colspan="6" style="text-align: center; padding: 2rem;">Loading audit trail...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Inspect Diff Modal -->
+  <div id="audit-diff-modal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 640px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Audit Record Inspection</h3>
+        <button type="button" class="modal-close-btn" onclick="closeDiffModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.8125rem;">
+          <div><strong>Action:</strong> <span id="diff-action"></span></div>
+          <div><strong>Table:</strong> <span id="diff-table"></span></div>
+          <div><strong>Performed By:</strong> <span id="diff-performer"></span></div>
+          <div><strong>Timestamp:</strong> <span id="diff-time"></span></div>
+        </div>
+
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--slate-600); margin-bottom: 0.5rem; text-transform: uppercase;">
+          Recorded Payload & Diff:
+        </div>
+        <pre id="diff-json" style="background-color: var(--slate-900); color: #a7f3d0; padding: 1rem; border-radius: 8px; font-size: 0.75rem; overflow-x: auto; max-height: 320px; line-height: 1.4;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeDiffModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/audit-logs.js"></script>
+</body>
+</html>

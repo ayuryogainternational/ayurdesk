@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In | AyurDesk - Ayuryoga International</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="auth-page">
+
+  <div class="auth-card">
+    <!-- Header -->
+    <div class="auth-header">
+      <div class="auth-logo-box">
+        <i data-lucide="layers" style="width: 28px; height: 28px;"></i>
+      </div>
+      <h1 style="font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em;">AyurDesk</h1>
+      <p style="font-size: 0.75rem; color: var(--forest-300); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.08em;">
+        Ayuryoga International
+      </p>
+    </div>
+
+    <!-- Body -->
+    <div class="auth-body">
+      <!-- Mode Tabs -->
+      <div style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.25rem;">
+        <button id="tab-signin" class="filter-tab active" style="flex: 1; padding: 0.5rem; text-align: center; border-radius: 6px 6px 0 0;">
+          Sign In
+        </button>
+        <button id="tab-register" class="filter-tab" style="flex: 1; padding: 0.5rem; text-align: center; border-radius: 6px 6px 0 0;">
+          Register Team
+        </button>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="signin-form" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label form-label-required" for="signin-email">Email Address</label>
+          <div style="position: relative;">
+            <input type="email" id="signin-email" class="form-input" style="width: 100%; padding-left: 2.25rem;" placeholder="e.g. admin@ayuryoga.example.com" required />
+            <i data-lucide="mail" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--slate-400);"></i>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label form-label-required" for="signin-password">Password</label>
+          <div style="position: relative;">
+            <input type="password" id="signin-password" class="form-input" style="width: 100%; padding-left: 2.25rem;" placeholder="••••••••" required />
+            <i data-lucide="lock" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--slate-400);"></i>
+          </div>
+        </div>
+
+        <button type="submit" id="btn-submit-signin" class="btn btn-primary" style="width: 100%; padding: 0.65rem;">
+          <i data-lucide="log-in" style="width: 16px; height: 16px;"></i>
+          <span>Sign In to AyurDesk</span>
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" style="display: none; flex-direction: column; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label form-label-required" for="reg-fullname">Full Name</label>
+          <input type="text" id="reg-fullname" class="form-input" placeholder="e.g. Shilpa Sharma" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label form-label-required" for="reg-email">Email Address</label>
+          <input type="email" id="reg-email" class="form-input" placeholder="shilpa@ayuryoga.example.com" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label form-label-required" for="reg-role">System Role</label>
+          <select id="reg-role" class="form-select">
+            <option value="staff" selected>Staff Member (Operations)</option>
+            <option value="admin">Administrator / Owner</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label form-label-required" for="reg-password">Initial Password</label>
+          <input type="password" id="reg-password" class="form-input" placeholder="Minimum 6 characters" minlength="6" required />
+        </div>
+
+        <button type="submit" id="btn-submit-reg" class="btn btn-teal" style="width: 100%; padding: 0.65rem;">
+          <i data-lucide="user-plus" style="width: 16px; height: 16px;"></i>
+          <span>Create Account</span>
+        </button>
+      </form>
+
+      <!-- Quick Demo Access Section -->
+      <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.65rem;">
+          1-Click Demo Profiles
+        </div>
+
+        <div class="demo-account-chip" onclick="quickLogin('admin')">
+          <div>
+            <strong style="color: var(--forest-900);">Owner / Administrator</strong>
+            <div style="color: var(--slate-500); font-size: 0.6875rem;">admin@ayuryoga.example.com</div>
+          </div>
+          <span class="badge badge-admin">Admin</span>
+        </div>
+
+        <div class="demo-account-chip" onclick="quickLogin('shilpa')">
+          <div>
+            <strong style="color: var(--forest-900);">Shilpa (Staff)</strong>
+            <div style="color: var(--slate-500); font-size: 0.6875rem;">shilpa@ayuryoga.example.com</div>
+          </div>
+          <span class="badge badge-staff">Staff</span>
+        </div>
+
+        <div class="demo-account-chip" onclick="quickLogin('gokul')">
+          <div>
+            <strong style="color: var(--forest-900);">Gokul (Staff)</strong>
+            <div style="color: var(--slate-500); font-size: 0.6875rem;">gokul@ayuryoga.example.com</div>
+          </div>
+          <span class="badge badge-staff">Staff</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

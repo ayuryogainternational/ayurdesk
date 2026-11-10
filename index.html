@@ -1,16 +1,248 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23103B37'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AyurDesk | Daily Operations Management - Ayuryoga International</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  </head>
-  <body class="bg-warm-100 text-slate-800">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard | AyurDesk - Ayuryoga International</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- CDN Dependencies -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <div class="main-wrapper">
+      <header id="app-header" class="top-header"></header>
+
+      <main class="page-container">
+        <!-- Page Title & Actions -->
+        <div class="page-header-row">
+          <div class="page-header">
+            <h1 class="page-title">Operations Dashboard</h1>
+            <p class="page-desc">Daily performance tracking, operational KPIs, and communications metrics</p>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <!-- Period Filter -->
+            <div class="filter-tabs" id="period-tabs">
+              <button class="filter-tab active" data-period="all">All Time</button>
+              <button class="filter-tab" data-period="30d">Last 30 Days</button>
+              <button class="filter-tab" data-period="7d">Last 7 Days</button>
+            </div>
+
+            <a href="daily-entry.html" class="btn btn-primary">
+              <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>
+              <span>Add Daily Record</span>
+            </a>
+
+            <a href="reports.html" id="dashboard-export-btn" class="btn btn-secondary" style="display: none;">
+              <i data-lucide="file-spreadsheet" style="width: 16px; height: 16px;"></i>
+              <span>Export Reports</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Anomaly Alert Banner (Hidden by default) -->
+        <div id="anomaly-banner" class="anomaly-alert" style="display: none;">
+          <div class="anomaly-alert-left">
+            <i data-lucide="alert-triangle" class="anomaly-alert-icon"></i>
+            <div>
+              <div class="anomaly-alert-title">Date Anomaly Flagged (2027-10-26)</div>
+              <div class="anomaly-alert-msg">One historical record has year 2027 instead of 2026. This is tracked in the audit trail.</div>
+            </div>
+          </div>
+          <button id="btn-fix-anomaly" class="btn btn-secondary btn-sm" style="background: #ffffff; border-color: #fde68a; color: #92400e;">
+            Resolve to 2026-10-26
+          </button>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+          <!-- Total Inquiries -->
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-top">
+                <span class="kpi-label">Inbound Inquiries</span>
+                <div class="kpi-icon-box kpi-icon-forest">
+                  <i data-lucide="help-circle" style="width: 20px; height: 20px;"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-enquiries">0</div>
+            </div>
+            <div class="kpi-subtext">
+              <span>Avg. <strong id="kpi-avg-enquiries">0.0</strong> / day</span>
+            </div>
+          </div>
+
+          <!-- Total Responses -->
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-top">
+                <span class="kpi-label">Responses Provided</span>
+                <div class="kpi-icon-box kpi-icon-teal">
+                  <i data-lucide="message-square" style="width: 20px; height: 20px;"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-responses">0</div>
+            </div>
+            <div class="kpi-subtext">
+              <span>Response Rate: <strong id="kpi-response-rate">0%</strong></span>
+            </div>
+          </div>
+
+          <!-- Total Bookings -->
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-top">
+                <span class="kpi-label">Confirmed Bookings</span>
+                <div class="kpi-icon-box kpi-icon-green">
+                  <i data-lucide="bookmark-check" style="width: 20px; height: 20px;"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-bookings">0</div>
+            </div>
+            <div class="kpi-subtext">
+              <span>Conversion: <strong id="kpi-booking-rate">0%</strong></span>
+            </div>
+          </div>
+
+          <!-- Confirmations -->
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-top">
+                <span class="kpi-label">Confirmations</span>
+                <div class="kpi-icon-box kpi-icon-purple">
+                  <i data-lucide="check-circle" style="width: 20px; height: 20px;"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-confirmations">0</div>
+            </div>
+            <div class="kpi-subtext">
+              <span>Confirmation Rate: <strong id="kpi-confirm-rate">0%</strong></span>
+            </div>
+          </div>
+
+          <!-- Tomorrow Expected -->
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-top">
+                <span class="kpi-label">Tomorrow's Capacity</span>
+                <div class="kpi-icon-box kpi-icon-amber">
+                  <i data-lucide="calendar-check" style="width: 20px; height: 20px;"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-tomorrow">0</div>
+            </div>
+            <div class="kpi-subtext">
+              <span>Scheduled forward bookings</span>
+            </div>
+          </div>
+
+          <!-- Telephony / WhatsApp -->
+          <div class="kpi-card">
+            <div>
+              <div class="kpi-top">
+                <span class="kpi-label">Communications</span>
+                <div class="kpi-icon-box kpi-icon-forest">
+                  <i data-lucide="phone-call" style="width: 20px; height: 20px;"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-comms">0</div>
+            </div>
+            <div class="kpi-subtext">
+              <span><strong id="kpi-wa-ratio">0</strong> WA vs <strong id="kpi-call-ratio">0</strong> Calls</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid charts-grid-3col">
+          <!-- Main Trend Area Chart -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="trending-up" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Daily Operational Trends
+                </div>
+                <div class="card-desc">Volume of inbound inquiries vs. completed bookings over time</div>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="trendChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Channel Distribution Chart -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="pie-chart" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Communication Channels
+                </div>
+                <div class="card-desc">WhatsApp vs. Traditional Telephony</div>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="channelChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Records Table Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i data-lucide="table-properties" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                Recent Operational Entries
+              </div>
+              <div class="card-desc">Most recently logged operational reports for Ayuryoga International</div>
+            </div>
+            <a href="records.html" class="btn btn-secondary btn-sm">
+              <span>View All Records</span>
+              <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+            </a>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th class="numeric">Inquiries</th>
+                  <th class="numeric">Responses</th>
+                  <th class="numeric">Turnaround</th>
+                  <th class="numeric">Bookings</th>
+                  <th class="numeric">Conversion</th>
+                  <th class="numeric">WhatsApp</th>
+                  <th class="numeric">Normal Calls</th>
+                </tr>
+              </thead>
+              <tbody id="recent-records-body">
+                <tr><td colspan="8" style="text-align: center; padding: 2rem;">Loading operations records...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
 </html>

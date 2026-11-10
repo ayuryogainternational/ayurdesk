@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analytics | AyurDesk - Ayuryoga International</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- CDN Dependencies -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <div class="main-wrapper">
+      <header id="app-header" class="top-header"></header>
+
+      <main class="page-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <h1 class="page-title">Analytics & Performance Insights</h1>
+          <p class="page-desc">Comprehensive operational efficiency, conversion funnel, and channel volume analysis</p>
+        </div>
+
+        <!-- Funnel Summary Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i data-lucide="filter" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                Operational Conversion Funnel
+              </div>
+              <div class="card-desc">End-to-end journey from inquiry intake to completed booking confirmation</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; text-align: center;">
+            <div style="background-color: var(--forest-50); border: 1px solid var(--forest-100); border-radius: 10px; padding: 1.25rem;">
+              <span class="badge badge-forest">Stage 1</span>
+              <div id="funnel-enquiries" style="font-size: 1.75rem; font-weight: 800; color: var(--forest-900); margin: 0.5rem 0 0.25rem 0;">0</div>
+              <div style="font-size: 0.8125rem; font-weight: 600; color: var(--slate-600);">Inquiries Received</div>
+              <div style="font-size: 0.6875rem; color: var(--slate-400); margin-top: 0.25rem;">100% Demand Intake</div>
+            </div>
+
+            <div style="background-color: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 10px; padding: 1.25rem;">
+              <span class="badge" style="background-color: #ccfbf1; color: #0f766e;">Stage 2</span>
+              <div id="funnel-responses" style="font-size: 1.75rem; font-weight: 800; color: #0f766e; margin: 0.5rem 0 0.25rem 0;">0</div>
+              <div style="font-size: 0.8125rem; font-weight: 600; color: var(--slate-600);">Responses Handled</div>
+              <div id="funnel-response-rate" style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.25rem;">0% Response Rate</div>
+            </div>
+
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 1.25rem;">
+              <span class="badge badge-success">Stage 3</span>
+              <div id="funnel-bookings" style="font-size: 1.75rem; font-weight: 800; color: #15803d; margin: 0.5rem 0 0.25rem 0;">0</div>
+              <div style="font-size: 0.8125rem; font-weight: 600; color: var(--slate-600);">Bookings Finalized</div>
+              <div id="funnel-booking-rate" style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.25rem;">0% Inquiry Conversion</div>
+            </div>
+
+            <div style="background-color: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 1.25rem;">
+              <span class="badge" style="background-color: #f3e8ff; color: #7e22ce;">Stage 4</span>
+              <div id="funnel-confirmations" style="font-size: 1.75rem; font-weight: 800; color: #7e22ce; margin: 0.5rem 0 0.25rem 0;">0</div>
+              <div style="font-size: 0.8125rem; font-weight: 600; color: var(--slate-600);">Confirmations</div>
+              <div id="funnel-confirm-rate" style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.25rem;">0% of Bookings</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid charts-grid-2col">
+          <!-- Comprehensive Trend Area -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="line-chart" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Intake vs Conversion Volume
+                </div>
+                <div class="card-desc">Chronological progression of demand and outcome</div>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="analyticsTrendChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Channel Volume Comparison -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="bar-chart-2" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  WhatsApp vs Normal Telephony Calls
+                </div>
+                <div class="card-desc">Daily communications volume comparison</div>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="analyticsChannelChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Day of the Week Performance -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i data-lucide="calendar" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                Day-of-Week Operational Distribution
+              </div>
+              <div class="card-desc">Average inquiry volume and booking conversion by day of week</div>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th class="numeric">Logged Operational Days</th>
+                  <th class="numeric">Avg. Inquiries</th>
+                  <th class="numeric">Avg. Bookings</th>
+                  <th class="numeric">Est. Conversion %</th>
+                </tr>
+              </thead>
+              <tbody id="day-of-week-body">
+                <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading distribution metrics...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/analytics.js"></script>
+</body>
+</html>

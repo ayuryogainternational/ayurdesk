@@ -179,7 +179,34 @@ The source data includes a record with date **`26-10-2027`**, while surrounding 
 
 ---
 
-## 9. Vercel Production Deployment
+## 9. Multi-Page Website (Pure HTML, CSS, JavaScript)
+
+AyurDesk also includes a native, zero-build multi-page website architecture that can be hosted on any static hosting provider (GitHub Pages, Netlify, Apache, Nginx, Vercel) or opened directly in any modern web browser:
+
+### Multi-Page Structure
+- [`index.html`](file:///a:/PROJECTS/ayurdesk/index.html) – Operations Dashboard (Live KPIs, 7d/30d/All filters, Trend & Channel charts, Anomaly alert, recent records)
+- [`login.html`](file:///a:/PROJECTS/ayurdesk/login.html) – Authentication & Provisioning (Sign In, Registration, 1-Click Demo Logins for Admin, Shilpa, Gokul)
+- [`daily-entry.html`](file:///a:/PROJECTS/ayurdesk/daily-entry.html) – Record Daily Operations (Validation, auto turnaround calculation, confirmation modal)
+- [`records.html`](file:///a:/PROJECTS/ayurdesk/records.html) – All Records Ledger (Date search, range filter, pagination, edit modal, delete dialog)
+- [`analytics.html`](file:///a:/PROJECTS/ayurdesk/analytics.html) – Performance Insights (Conversion funnel, Chart.js trends, WhatsApp vs phone calls, day-of-week averages)
+- [`reports.html`](file:///a:/PROJECTS/ayurdesk/reports.html) – Admin Export Center (Scope filters, ExcelJS `.xlsx` workbook generation, jsPDF `.pdf` landscape report)
+- [`users.html`](file:///a:/PROJECTS/ayurdesk/users.html) – User & Staff Management (Team listing, role assignment, password reset requirement toggling)
+- [`audit-logs.html`](file:///a:/PROJECTS/ayurdesk/audit-logs.html) – Immutable Audit Trail (Change history, action filters, payload inspection diff modal)
+- [`settings.html`](file:///a:/PROJECTS/ayurdesk/settings.html) – Settings & System Profile (Timezone sync, password update, sandbox seed reset)
+
+### Running the Multi-Page Website
+You can open any HTML file directly in your browser or run a lightweight local static server:
+```bash
+# Using Node.js
+npx serve .
+
+# Or using Python 3
+python -m http.server 8080
+```
+
+---
+
+## 10. Vercel Production Deployment
 
 1. Push this repository to GitHub or GitLab.
 2. Log in to [Vercel](https://vercel.com) and click **Add New Project**.

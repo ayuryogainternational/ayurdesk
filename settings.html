@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings | AyurDesk - Ayuryoga International</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- CDN Dependencies -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <div class="main-wrapper">
+      <header id="app-header" class="top-header"></header>
+
+      <main class="page-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <h1 class="page-title">Settings & System Profile</h1>
+          <p class="page-desc">Organization configuration, Indian Ocean timezone synchronization, and security preferences</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 900px;">
+          <!-- Organization & Timezone -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="building" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Organization Profile
+                </div>
+                <div class="card-desc">Entity details and operational timezone parameters</div>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid-2col">
+              <div class="form-group">
+                <label class="form-label">Organization Name</label>
+                <input type="text" class="form-input" value="Ayuryoga International" readonly style="background-color: var(--slate-50);" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Standard Operational Timezone</label>
+                <input type="text" class="form-input" value="Indian/Mauritius (UTC+04:00)" readonly style="background-color: var(--slate-50);" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Primary Brand Palette</label>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+                  <span style="display: inline-block; width: 24px; height: 24px; border-radius: 6px; background-color: #103B37; border: 1px solid #000;" title="#103B37 Forest Green"></span>
+                  <span style="display: inline-block; width: 24px; height: 24px; border-radius: 6px; background-color: #23675B;" title="#23675B Teal"></span>
+                  <span style="display: inline-block; width: 24px; height: 24px; border-radius: 6px; background-color: #F7F7EF; border: 1px solid #ccc;" title="#F7F7EF Warm Off-White"></span>
+                  <span style="font-size: 0.75rem; color: var(--slate-500); margin-left: 0.25rem;">Forest Green, Teal & Warm White</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Auditing Standard</label>
+                <input type="text" class="form-input" value="PostgreSQL PL/pgSQL Triggers & Append-Only Log" readonly style="background-color: var(--slate-50);" />
+              </div>
+            </div>
+          </div>
+
+          <!-- User Security & Password -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="lock" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Security & Password Management
+                </div>
+                <div class="card-desc">Update your login password and manage access security</div>
+              </div>
+            </div>
+
+            <form id="change-password-form" class="form-grid form-grid-2col">
+              <div class="form-group">
+                <label class="form-label form-label-required" for="current-pw">Current Password</label>
+                <input type="password" id="current-pw" class="form-input" placeholder="••••••••" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label form-label-required" for="new-pw">New Password</label>
+                <input type="password" id="new-pw" class="form-input" minlength="6" placeholder="Minimum 6 characters" required />
+              </div>
+
+              <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">Update Password</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Database Connection Info -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="database" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Database & Cloud Infrastructure
+                </div>
+                <div class="card-desc">Supabase connection status and active API configuration</div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.8125rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                <span style="color: var(--slate-600);">Supabase Endpoint:</span>
+                <code style="font-size: 0.75rem; background: var(--warm-200); padding: 0.2rem 0.5rem; border-radius: 4px;">https://obnjydkldmfbtkiomtux.supabase.co</code>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                <span style="color: var(--slate-600);">Row Level Security (RLS):</span>
+                <span class="badge badge-success">Enabled on all tables</span>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0;">
+                <span style="color: var(--slate-600);">Export Edge Function:</span>
+                <span class="badge badge-forest">export-reports (Role Verified)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Operations Maintenance (Reset Data) -->
+          <div class="card" style="border-color: #fed7aa; background-color: #fffaf5;">
+            <div class="card-header">
+              <div>
+                <div class="card-title" style="color: #9a3412;">
+                  <i data-lucide="alert-circle" style="width: 18px; height: 18px; color: #ea580c;"></i>
+                  Operations Maintenance & Sandbox Reset
+                </div>
+                <div class="card-desc">Restore the 16 historical baseline seed records for testing and demonstration</div>
+              </div>
+            </div>
+
+            <p style="font-size: 0.8125rem; color: #7c2d12; margin-bottom: 1rem;">
+              If you wish to reset any edits or test entries back to the original historical baseline 
+              (including the flagged 2027-10-26 anomaly record), click below:
+            </p>
+
+            <button type="button" id="btn-reset-seed" class="btn btn-secondary" style="border-color: #fdba74; color: #9a3412;">
+              <i data-lucide="rotate-ccw" style="width: 16px; height: 16px;"></i>
+              <span>Reset Data to Historical Seed</span>
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>
