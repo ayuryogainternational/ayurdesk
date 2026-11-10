@@ -97,16 +97,18 @@ WITH CHECK (
   auth.role() = 'authenticated'
 );
 
--- UPDATE: Authenticated staff and admin can update daily reports (audited via trigger)
-CREATE POLICY "daily_reports_update_authenticated"
+-- UPDATE: Reception overwrite & 24-hour window policy:
+-- Staff (Shilpa, Gokul) can overwrite/edit reports within 24 hours of creation.
+-- After 24 hours, editing is locked for staff; only Admin can modify historical records.
+CREATE POLICY "daily_reports_update_within_24h_or_admin"
 ON public.daily_reports
 FOR UPDATE
 TO authenticated
 USING (
-  auth.role() = 'authenticated'
+  public.is_admin() OR (created_at >= now() - interval '24 hours')
 )
 WITH CHECK (
-  auth.role() = 'authenticated'
+  public.is_admin() OR (created_at >= now() - interval '24 hours')
 );
 
 -- DELETE: Strictly Owner / Admin only. Staff cannot delete records.

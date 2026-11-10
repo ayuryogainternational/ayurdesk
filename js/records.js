@@ -184,12 +184,15 @@ function renderTable() {
           ? Math.round((r.total_bookings / r.total_enquiries) * 100) + '%'
           : '-';
 
+      const editCheck = window.dataStore.canEditReport(r, window.authManager.getCurrentUser());
+
       return `
         <tr class="${isAnomaly ? 'anomaly-row' : ''}">
           <td>
             <div style="font-weight: 600; color: var(--forest-900); display: flex; align-items: center; gap: 0.35rem;">
               <span>${window.formatDateDisplay(r.report_date)}</span>
               ${isAnomaly ? '<span class="badge badge-warning" style="font-size: 0.6rem;">Anomaly</span>' : ''}
+              ${!editCheck.canEdit ? '<span class="badge badge-neutral" style="font-size: 0.6rem;" title="' + (editCheck.reason || 'Locked') + '">Locked (>24h)</span>' : ''}
             </div>
             <div style="font-size: 0.6875rem; color: var(--slate-400);">${r.report_date}</div>
           </td>
@@ -203,12 +206,18 @@ function renderTable() {
           <td class="numeric">${r.normal_calls ?? '<span class="empty-cell">-</span>'}</td>
           <td style="text-align: right;">
             <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
-              <button class="btn btn-secondary btn-icon-only" title="Edit Record" onclick="openEditModal('${r.id}')">
-                <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
-              </button>
+              ${
+                editCheck.canEdit
+                  ? `<button class="btn btn-secondary btn-icon-only" title="Edit / Overwrite Record" onclick="openEditModal('${r.id}')">
+                       <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
+                     </button>`
+                  : `<button class="btn btn-secondary btn-icon-only" disabled style="opacity: 0.45; cursor: not-allowed;" title="${editCheck.reason || 'Locked (>24h)'}">
+                       <i data-lucide="lock" style="width: 14px; height: 14px; color: var(--slate-400);"></i>
+                     </button>`
+              }
               ${
                 isAdmin
-                  ? `<button class="btn btn-secondary btn-icon-only" style="color: var(--danger-600);" title="Delete Record" onclick="openDeleteModal('${r.id}', '${r.report_date}')">
+                  ? `<button class="btn btn-secondary btn-icon-only" style="color: var(--danger-600);" title="Delete Record (Admin Only)" onclick="openDeleteModal('${r.id}', '${r.report_date}')">
                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
                      </button>`
                   : ''
@@ -229,6 +238,13 @@ function renderTable() {
 async function openEditModal(recordId) {
   const record = await window.dataStore.getReportById(recordId);
   if (!record) return;
+
+  const user = window.authManager.getCurrentUser();
+  const check = window.dataStore.canEditReport(record, user);
+  if (!check.canEdit) {
+    window.showToast('Editing Locked', check.reason || 'Staff cannot edit records after 24 hours. Admin access required.', 'warning');
+    return;
+  }
 
   document.getElementById('edit-record-id').value = record.id;
   document.getElementById('edit-date').value = record.report_date;

@@ -326,6 +326,7 @@ DROP POLICY IF EXISTS "profiles_delete_admin_only" ON public.profiles;
 DROP POLICY IF EXISTS "daily_reports_select_authenticated" ON public.daily_reports;
 DROP POLICY IF EXISTS "daily_reports_insert_authenticated" ON public.daily_reports;
 DROP POLICY IF EXISTS "daily_reports_update_authenticated" ON public.daily_reports;
+DROP POLICY IF EXISTS "daily_reports_update_within_24h_or_admin" ON public.daily_reports;
 DROP POLICY IF EXISTS "daily_reports_delete_admin_only" ON public.daily_reports;
 
 DROP POLICY IF EXISTS "audit_logs_select_admin_only" ON public.audit_logs;
@@ -365,10 +366,12 @@ CREATE POLICY "daily_reports_insert_authenticated"
 ON public.daily_reports FOR INSERT TO authenticated
 WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "daily_reports_update_authenticated"
+-- UPDATE: Staff (Shilpa, Gokul) can overwrite/edit reports within 24 hours of creation.
+-- After 24 hours, only administrators can modify historical records.
+CREATE POLICY "daily_reports_update_within_24h_or_admin"
 ON public.daily_reports FOR UPDATE TO authenticated
-USING (auth.role() = 'authenticated')
-WITH CHECK (auth.role() = 'authenticated');
+USING (public.is_admin() OR (created_at >= now() - interval '24 hours'))
+WITH CHECK (public.is_admin() OR (created_at >= now() - interval '24 hours'));
 
 CREATE POLICY "daily_reports_delete_admin_only"
 ON public.daily_reports FOR DELETE TO authenticated

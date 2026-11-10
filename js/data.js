@@ -134,6 +134,49 @@ class DataStore {
     return reports.find((r) => r.report_date === date) || null;
   }
 
+  // Permission Check: 24-hour edit window
+  // Staff (Shilpa, Gokul) can overwrite/edit reports within 24 hours of creation.
+  // After 24 hours, editing is locked and only administrators can edit.
+  canEditReport(report, user = null) {
+    const activeUser = user || (window.authManager ? window.authManager.getCurrentUser() : null);
+    if (!activeUser) return { canEdit: false, reason: 'Authentication required' };
+    if (activeUser.role === 'admin') return { canEdit: true };
+
+    const now = Date.now();
+    // 1. If created_at timestamp exists, check if > 24 hours
+    if (report && report.created_at) {
+      const createdMs = new Date(report.created_at).getTime();
+      if (!isNaN(createdMs)) {
+        const elapsedHours = (now - createdMs) / (1000 * 60 * 60);
+        if (elapsedHours > 24) {
+          return {
+            canEdit: false,
+            reason: `Editing locked: This record was submitted ${Math.floor(elapsedHours)} hours ago (>24h). Only administrators can modify historical records older than 24 hours.`,
+          };
+        }
+        return { canEdit: true };
+      }
+    }
+
+    // 2. If no created_at timestamp, compare report_date with today in Mauritius
+    const today = window.getTodayMauritiusDate ? window.getTodayMauritiusDate() : new Date().toISOString().split('T')[0];
+    if (report && report.report_date === today) {
+      return { canEdit: true };
+    }
+
+    if (report && report.report_date) {
+      const recordDateMs = new Date(`${report.report_date}T23:59:59Z`).getTime();
+      if (now - recordDateMs > 24 * 60 * 60 * 1000) {
+        return {
+          canEdit: false,
+          reason: 'Editing locked: Historical records older than 24 hours can only be modified by an administrator.',
+        };
+      }
+    }
+
+    return { canEdit: true };
+  }
+
   async saveReport(reportData) {
     const user = window.authManager ? window.authManager.getCurrentUser() : null;
     const reports = await this.getReports();
@@ -142,18 +185,26 @@ class DataStore {
     const existingIndex = reports.findIndex((r) => r.report_date === reportData.report_date);
 
     if (existingIndex >= 0) {
-      // Update
+      // Overwrite / Update existing daily report
       const oldRecord = reports[existingIndex];
+      const check = this.canEditReport(oldRecord, user);
+      if (!check.canEdit) {
+        throw new Error(check.reason);
+      }
+
       const updated = {
         ...oldRecord,
         ...reportData,
         updated_by: user ? user.id : 'system',
+        updated_by_name: user ? user.full_name : 'Reception Staff',
         updated_at: new Date().toISOString(),
       };
       reports[existingIndex] = updated;
       localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
 
       await this.addAuditLog('UPDATE', 'daily_reports', updated.id, oldRecord, updated, {
+        event: 'reception_overwrite',
+        overwritten_by: user ? user.full_name : 'Reception Staff',
         modified_fields: Object.keys(reportData),
       });
 
@@ -171,11 +222,12 @@ class DataStore {
 
       return updated;
     } else {
-      // Insert
+      // Insert new daily report
       const newRecord = {
         id: 'rep-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
         ...reportData,
         created_by: user ? user.id : 'system',
+        created_by_name: user ? user.full_name : 'Reception Staff',
         created_at: new Date().toISOString(),
       };
       reports.unshift(newRecord);
@@ -183,6 +235,7 @@ class DataStore {
 
       await this.addAuditLog('INSERT', 'daily_reports', newRecord.id, null, newRecord, {
         event: 'created',
+        created_by: user ? user.full_name : 'Reception Staff',
       });
 
       // Try Supabase sync
@@ -205,16 +258,25 @@ class DataStore {
     if (index === -1) throw new Error('Record not found');
 
     const oldRecord = reports[index];
+    const check = this.canEditReport(oldRecord, user);
+    if (!check.canEdit) {
+      throw new Error(check.reason);
+    }
+
     const updated = {
       ...oldRecord,
       ...patch,
       updated_by: user ? user.id : 'system',
+      updated_by_name: user ? user.full_name : 'Reception Staff',
       updated_at: new Date().toISOString(),
     };
     reports[index] = updated;
     localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
 
-    await this.addAuditLog('UPDATE', 'daily_reports', id, oldRecord, updated, patch);
+    await this.addAuditLog('UPDATE', 'daily_reports', id, oldRecord, updated, {
+      ...patch,
+      modified_by: user ? user.full_name : 'Reception Staff',
+    });
 
     if (window.supabaseClient) {
       try {

@@ -99,6 +99,48 @@ export function isDateAnomaly(dateStr: string): boolean {
 }
 
 /**
+ * Determines if a user can edit a daily report based on role and 24-hour edit window.
+ * - Admin: Can edit any report at any time.
+ * - Staff (Shilpa, Gokul): Can overwrite / edit reports on the same day or within 24 hours of creation.
+ *   After 24 hours, staff are locked out and only admin can edit.
+ */
+export function canEditDailyReport(
+  record: { created_at?: string; report_date: string },
+  userRole: 'admin' | 'staff',
+  currentTimeMs: number = Date.now()
+): { canEdit: boolean; reason?: string } {
+  if (userRole === 'admin') {
+    return { canEdit: true };
+  }
+
+  // If created_at exists, check if <= 24 hours have elapsed
+  if (record.created_at) {
+    const createdMs = new Date(record.created_at).getTime();
+    if (!isNaN(createdMs)) {
+      const elapsedHours = (currentTimeMs - createdMs) / (1000 * 60 * 60);
+      if (elapsedHours > 24) {
+        return {
+          canEdit: false,
+          reason: `Locked: Record was submitted ${Math.floor(elapsedHours)} hours ago (>24 hours). Only administrators can modify records older than 24 hours.`,
+        };
+      }
+      return { canEdit: true };
+    }
+  }
+
+  // Fallback if created_at is missing: compare record_date with current date
+  const recordDateMs = new Date(`${record.report_date}T23:59:59Z`).getTime();
+  if (currentTimeMs - recordDateMs > 24 * 60 * 60 * 1000) {
+    return {
+      canEdit: false,
+      reason: 'Locked: Historical records older than 24 hours can only be modified by an administrator.',
+    };
+  }
+
+  return { canEdit: true };
+}
+
+/**
  * Return detailed anomaly reason for alerts and badges
  */
 export function getAnomalyReason(dateStr: string): string {

@@ -1,10 +1,12 @@
 // ====================================================================
 // AyurDesk - Daily Operational Entry Script
+// Supports Reception Handover (Shilpa & Gokul) Overwrite within 24h
 // ====================================================================
 
 let pendingData = null;
+let currentExistingRecord = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   if (!window.authManager.requireAuth()) return;
 
   window.initAppLayout('daily-entry');
@@ -12,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const dateInput = document.getElementById('report_date');
   if (dateInput) {
     dateInput.value = window.getTodayMauritiusDate();
+    dateInput.addEventListener('change', () => {
+      checkExistingReportForDate(dateInput.value);
+    });
   }
 
   // Setup live calculation listeners
@@ -41,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('report_date').value = window.getTodayMauritiusDate();
         clearErrors();
         updateLiveRates();
+        checkExistingReportForDate(document.getElementById('report_date').value);
       }
     });
   }
@@ -59,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       pendingData = validation.parsedValues;
-      showConfirmModal(pendingData);
+      showConfirmModal(pendingData, currentExistingRecord);
     });
   }
 
@@ -73,7 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try {
         await window.dataStore.saveReport(pendingData);
-        window.showToast('Record Saved', `Operational entry for ${pendingData.report_date} successfully recorded.`, 'success');
+        const actionType = currentExistingRecord ? 'overwritten & updated' : 'recorded';
+        window.showToast(
+          'Record Saved',
+          `Operational entry for ${pendingData.report_date} successfully ${actionType}.`,
+          'success'
+        );
         closeConfirmModal();
         setTimeout(() => {
           window.location.href = 'records.html';
@@ -85,7 +96,102 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Initial check for default date
+  await checkExistingReportForDate(dateInput.value);
 });
+
+async function checkExistingReportForDate(dateStr) {
+  if (!dateStr) return;
+  const user = window.authManager.getCurrentUser();
+  const banner = document.getElementById('reception-notice-banner');
+  const titleEl = document.getElementById('reception-notice-title');
+  const msgEl = document.getElementById('reception-notice-msg');
+  const submitBtn = document.getElementById('btn-submit-entry');
+
+  currentExistingRecord = await window.dataStore.getReportByDate(dateStr);
+
+  const numericInputs = [
+    'total_enquiries',
+    'total_responses',
+    'total_confirmations',
+    'total_bookings',
+    'tomorrow_bookings',
+    'whatsapp_calls_messages',
+    'normal_calls',
+  ];
+
+  if (currentExistingRecord) {
+    const editCheck = window.dataStore.canEditReport(currentExistingRecord, user);
+
+    if (banner) banner.style.display = 'flex';
+
+    if (editCheck.canEdit) {
+      // Allowed to overwrite within 24h
+      banner.style.backgroundColor = '#f0fdf4';
+      banner.style.borderColor = '#bbf7d0';
+      titleEl.style.color = '#15803d';
+      titleEl.textContent = 'Existing Report Detected – Reception Handover Active';
+
+      const creator = currentExistingRecord.created_by_name || 'reception staff';
+      msgEl.style.color = '#166534';
+      msgEl.textContent = `A report for ${dateStr} was previously submitted by ${creator}. As reception staff, you have access to overwrite and update today's statistics within the 24-hour window. Current figures have been loaded below.`;
+
+      // Prepopulate
+      numericInputs.forEach((field) => {
+        const input = document.getElementById(field);
+        if (input) {
+          input.value = currentExistingRecord[field] ?? '';
+          input.disabled = false;
+        }
+      });
+
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i data-lucide="refresh-cw" style="width: 18px; height: 18px;"></i><span>Overwrite & Update Daily Record</span>';
+      }
+    } else {
+      // Locked: > 24 hours old and user is staff
+      banner.style.backgroundColor = '#fffbeb';
+      banner.style.borderColor = '#fde68a';
+      titleEl.style.color = '#92400e';
+      titleEl.textContent = 'Editing Locked – 24-Hour Window Expired';
+
+      msgEl.style.color = '#b45309';
+      msgEl.textContent = editCheck.reason || 'This record was submitted over 24 hours ago. Staff editing is locked. Only administrators have permission to modify historical records older than 24 hours.';
+
+      // Prepopulate for viewing only
+      numericInputs.forEach((field) => {
+        const input = document.getElementById(field);
+        if (input) {
+          input.value = currentExistingRecord[field] ?? '';
+          input.disabled = true;
+        }
+      });
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i data-lucide="lock" style="width: 18px; height: 18px;"></i><span>Editing Locked (>24h)</span>';
+      }
+    }
+  } else {
+    // New Record
+    if (banner) banner.style.display = 'none';
+
+    numericInputs.forEach((field) => {
+      const input = document.getElementById(field);
+      if (input) input.disabled = false;
+    });
+
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i data-lucide="save" style="width: 18px; height: 18px;"></i><span>Save Daily Record</span>';
+    }
+  }
+
+  updateLiveRates();
+  if (window.lucide) window.lucide.createIcons();
+}
 
 function parseOptionalInt(id) {
   const el = document.getElementById(id);
@@ -120,9 +226,10 @@ function updateLiveRates() {
   }
 
   // Total comms
-  const totalComms = (parseOptionalInt('whatsapp_calls_messages') !== null || parseOptionalInt('normal_calls') !== null)
-    ? wa + normal
-    : '--';
+  const totalComms =
+    parseOptionalInt('whatsapp_calls_messages') !== null || parseOptionalInt('normal_calls') !== null
+      ? wa + normal
+      : '--';
   document.getElementById('live-total-comms').textContent = totalComms;
 }
 
@@ -181,12 +288,17 @@ function validateForm() {
   return { isValid, errors, parsedValues: parsed };
 }
 
-function showConfirmModal(data) {
+function showConfirmModal(data, existing) {
   document.getElementById('confirm-date').textContent = data.report_date;
   document.getElementById('confirm-enquiries').textContent = data.total_enquiries ?? 'Not recorded';
   document.getElementById('confirm-responses').textContent = data.total_responses ?? 'Not recorded';
   document.getElementById('confirm-bookings').textContent = data.total_bookings ?? 'Not recorded';
   document.getElementById('confirm-tomorrow').textContent = data.tomorrow_bookings ?? 'Not recorded';
+
+  const modalTitle = document.querySelector('#confirm-modal .modal-title');
+  if (modalTitle) {
+    modalTitle.textContent = existing ? 'Confirm Overwrite & Update' : 'Confirm Submission';
+  }
 
   const modal = document.getElementById('confirm-modal');
   if (modal) modal.classList.add('active');
@@ -203,4 +315,3 @@ function closeConfirmModal() {
 }
 
 window.closeConfirmModal = closeConfirmModal;
-

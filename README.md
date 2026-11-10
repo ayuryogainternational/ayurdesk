@@ -39,7 +39,8 @@ AyurDesk is a production-grade daily operations tracking, analytics, and reporti
 | Mandatory Password Change on First Login |  |  |  |
 | View Daily Records & KPI Overview |  |  |  |
 | Create New Daily Operational Records |  |  |  |
-| Edit Existing Daily Records | *(Logged in Audit)* | *(Logged in Audit)* | *(Logged in Audit)* |
+| Edit / Overwrite Daily Records |  *(Within 24 Hours Only)* |  *(Within 24 Hours Only)* |  *(Anytime)* |
+| Edit Records After 24 Hours |  *(Locked after 24h)* |  *(Locked after 24h)* |  |
 | Delete Records |  |  |  |
 | Export Excel / PDF Reports |  *(403 Forbidden)* |  *(403 Forbidden)* |  |
 | View Audit History Ledger |  |  |  |

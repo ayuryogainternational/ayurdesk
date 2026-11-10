@@ -10,7 +10,7 @@ import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { RecordEditModal } from './RecordEditModal';
-import { isDateAnomaly, getAnomalyReason } from '../../lib/validation';
+import { isDateAnomaly, getAnomalyReason, canEditDailyReport } from '../../lib/validation';
 import {
   Search,
   Filter,
@@ -284,14 +284,32 @@ export const RecordsTable: React.FC<RecordsTableProps> = ({
                       {/* Actions */}
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setEditingReport(rec)}
-                            title="Edit Record (Audited)"
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-forest-100 transition"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
+                          {(() => {
+                            const editCheck = canEditDailyReport(rec, isAdmin ? 'admin' : 'staff');
+                            if (editCheck.canEdit) {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingReport(rec)}
+                                  title="Edit / Overwrite Record (Audited)"
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-forest-100 transition"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                              );
+                            } else {
+                              return (
+                                <button
+                                  type="button"
+                                  disabled
+                                  title={editCheck.reason || 'Locked: Only administrators can modify records older than 24 hours.'}
+                                  className="p-1.5 rounded-lg text-slate-300 cursor-not-allowed"
+                                >
+                                  <Lock className="w-3.5 h-3.5" />
+                                </button>
+                              );
+                            }
+                          })()}
 
                           {isAdmin && onDelete && (
                             <button

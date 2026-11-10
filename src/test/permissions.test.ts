@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { UserRole } from '../types';
+import { canEditDailyReport } from '../lib/validation';
 
 interface SimulatedUser {
   id: string;
@@ -22,8 +23,14 @@ class SecurityPolicyEngine {
     return true; // Staff & admin can insert
   }
 
-  canEditReport(user: SimulatedUser): boolean {
-    return true; // Staff & admin can edit with audit history
+  canEditReport(
+    user: SimulatedUser,
+    report?: { created_at?: string; report_date: string },
+    nowMs?: number
+  ): boolean {
+    if (user.role === 'admin') return true;
+    if (!report) return true;
+    return canEditDailyReport(report, user.role, nowMs).canEdit;
   }
 
   canDeleteReport(user: SimulatedUser): boolean {
@@ -83,11 +90,27 @@ describe('Role & Permission Enforcement', () => {
       expect(engine.canViewReports(gokul)).toBe(true);
     });
 
-    it('Shilpa and Gokul can create and edit daily records', () => {
+    it('Shilpa and Gokul can create and overwrite daily records within 24 hours (reception handover)', () => {
+      const now = new Date('2026-11-10T14:00:00Z').getTime();
+      const morningReport = {
+        report_date: '2026-11-10',
+        created_at: '2026-11-10T08:00:00Z', // Created 6 hours ago
+      };
       expect(engine.canCreateReport(shilpa)).toBe(true);
       expect(engine.canCreateReport(gokul)).toBe(true);
-      expect(engine.canEditReport(shilpa)).toBe(true);
-      expect(engine.canEditReport(gokul)).toBe(true);
+      // Both Shilpa and Gokul can edit and overwrite report within 24h
+      expect(engine.canEditReport(shilpa, morningReport, now)).toBe(true);
+      expect(engine.canEditReport(gokul, morningReport, now)).toBe(true);
+    });
+
+    it('Staff CANNOT edit or overwrite reports after 24 hours have elapsed', () => {
+      const now = new Date('2026-11-11T12:00:00Z').getTime();
+      const pastReport = {
+        report_date: '2026-11-09',
+        created_at: '2026-11-09T08:00:00Z', // Submitted 52 hours ago (>24h)
+      };
+      expect(engine.canEditReport(shilpa, pastReport, now)).toBe(false);
+      expect(engine.canEditReport(gokul, pastReport, now)).toBe(false);
     });
 
     it('CRITICAL: Staff CANNOT export Excel or PDF reports and receive 403 Forbidden', () => {
