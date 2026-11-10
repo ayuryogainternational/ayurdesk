@@ -120,3 +120,4 @@ describe('Therapist Overtime Remuneration Rules (5h Threshold, 75 MUR/hr)', () =
     expect(result.overtimeSalary).toBe(0);
   });
 });
+

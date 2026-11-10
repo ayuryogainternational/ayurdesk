@@ -56,3 +56,4 @@ WITH CHECK (true);
 CREATE POLICY "therapist_attendance_delete_admin"
 ON public.therapist_attendance FOR DELETE TO authenticated
 USING (public.is_admin());
+

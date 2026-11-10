@@ -406,3 +406,4 @@ async function updateMonthlyStatement(dateStr) {
 }
 
 window.deleteWork = deleteWork;
+

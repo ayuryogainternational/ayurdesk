@@ -114,13 +114,6 @@ function initAppLayout(activePageKey) {
         </div>
       </div>
       <div class="header-right">
-        <div class="quick-switcher" title="Quick Switch Shift Profile">
-          <span style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600; margin-right: 0.15rem;">Shift:</span>
-          <button class="switch-pill ${user?.email?.includes('shilpa') ? 'active' : ''}" onclick="window.authManager.switchDemoUser('shilpa')">Shilpa</button>
-          <button class="switch-pill ${user?.email?.includes('gokul') ? 'active' : ''}" onclick="window.authManager.switchDemoUser('gokul')">Gokul</button>
-          <button class="switch-pill ${user?.role === 'therapist' ? 'active' : ''}" onclick="window.authManager.switchDemoUser('vishnu')">Vishnu</button>
-          <button class="switch-pill ${isAdmin ? 'active-admin' : ''}" onclick="window.authManager.switchDemoUser('admin')">Admin</button>
-        </div>
         <div class="clock-pill">
           <i data-lucide="clock"></i>
           <span>Mauritius: <strong id="live-mauritius-time">--:--:--</strong></span>
