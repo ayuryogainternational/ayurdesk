@@ -203,3 +203,4 @@ function closeConfirmModal() {
 }
 
 window.closeConfirmModal = closeConfirmModal;
+

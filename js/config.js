@@ -89,3 +89,4 @@ window.getTodayMauritiusDate = getTodayMauritiusDate;
 window.formatDateTimeMauritius = formatDateTimeMauritius;
 window.formatDateDisplay = formatDateDisplay;
 window.getReportGenerationTimestamp = getReportGenerationTimestamp;
+

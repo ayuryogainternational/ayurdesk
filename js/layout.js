@@ -202,3 +202,4 @@ function showToast(title, message, type = 'info') {
 
 window.initAppLayout = initAppLayout;
 window.showToast = showToast;
+

@@ -418,3 +418,4 @@ function handleExportPdf() {
     if (window.lucide) window.lucide.createIcons();
   }
 }
+

@@ -176,3 +176,4 @@ function renderDayOfWeek(reports) {
     })
     .join('');
 }
+

@@ -111,3 +111,4 @@ function closeDiffModal() {
 
 window.inspectAuditLog = inspectAuditLog;
 window.closeDiffModal = closeDiffModal;
+

@@ -268,3 +268,4 @@ function renderRecentTable(records) {
     })
     .join('');
 }
+

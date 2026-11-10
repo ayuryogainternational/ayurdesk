@@ -112,3 +112,4 @@ function closeAddUserModal() {
 
 window.closeAddUserModal = closeAddUserModal;
 window.togglePasswordReq = togglePasswordReq;
+

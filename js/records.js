@@ -267,3 +267,4 @@ window.openEditModal = openEditModal;
 window.closeEditModal = closeEditModal;
 window.openDeleteModal = openDeleteModal;
 window.closeDeleteModal = closeDeleteModal;
+

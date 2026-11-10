@@ -158,3 +158,4 @@ class AuthManager {
 }
 
 window.authManager = new AuthManager();
+
