@@ -206,17 +206,6 @@ export async function exportToExcel({
       right: { style: 'thin', color: { argb: 'FFE5E5DC' } },
     };
   });
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFEAF3F1' }, // subtle teal tint
-    };
-    cell.border = {
-      top: { style: 'thin', color: { argb: 'FF23675B' } },
-      bottom: { style: 'double', color: { argb: 'FF103B37' } },
-      left: { style: 'thin', color: { argb: 'FFE5E5DC' } },
-      right: { style: 'thin', color: { argb: 'FFE5E5DC' } },
-    };
-  });
 
   // 7. Column Widths
   worksheet.columns = [

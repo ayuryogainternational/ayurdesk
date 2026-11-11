@@ -67,16 +67,43 @@ const ALL_THERAPISTS = [
 const OVERTIME_HOURS_THRESHOLD = 5.0;
 const OVERTIME_HOURLY_RATE = 75; // 75 MUR per hour above 5h
 
-function calculateTherapistOvertime(hours) {
-  const h = Math.max(0, Number(hours) || 0);
-  const regular = Math.min(OVERTIME_HOURS_THRESHOLD, h);
-  const overtime = +(Math.max(0, h - OVERTIME_HOURS_THRESHOLD)).toFixed(2);
-  const isOvertime = h > OVERTIME_HOURS_THRESHOLD;
-  const salary = +(overtime * OVERTIME_HOURLY_RATE).toFixed(2);
+function calculateTherapistOvertime(hours, minutes = 0) {
+  const hInput = Math.max(0, Number(hours) || 0);
+  const mInput = Math.max(0, Number(minutes) || 0);
+
+  // If decimal hours provided without separate minutes (e.g. 5.5, 0)
+  let totalMinutes = 0;
+  if (mInput === 0 && hInput % 1 !== 0) {
+    totalMinutes = Math.round(hInput * 60);
+  } else {
+    totalMinutes = Math.floor(hInput) * 60 + Math.round(mInput);
+  }
+
+  const hDisplay = Math.floor(totalMinutes / 60);
+  const mDisplay = totalMinutes % 60;
+  const totalHoursDecimal = +(totalMinutes / 60).toFixed(2);
+
+  const regularMinutes = Math.min(OVERTIME_HOURS_THRESHOLD * 60, totalMinutes);
+  const regularHoursDecimal = +(regularMinutes / 60).toFixed(2);
+
+  const overtimeMinutes = Math.max(0, totalMinutes - OVERTIME_HOURS_THRESHOLD * 60);
+  const overtimeHoursDecimal = +(overtimeMinutes / 60).toFixed(2);
+  const isOvertime = totalMinutes > OVERTIME_HOURS_THRESHOLD * 60;
+
+  const otH = Math.floor(overtimeMinutes / 60);
+  const otM = overtimeMinutes % 60;
+
+  const salary = +(overtimeHoursDecimal * OVERTIME_HOURLY_RATE).toFixed(2);
+
   return {
-    hours: h,
-    regular_hours: regular,
-    overtime_hours: overtime,
+    hours: hDisplay,
+    minutes: mDisplay,
+    total_hours: totalHoursDecimal,
+    formatted_time: `${hDisplay}h ${mDisplay}m`,
+    regular_hours: regularHoursDecimal,
+    overtime_hours: overtimeHoursDecimal,
+    overtime_minutes: overtimeMinutes,
+    formatted_overtime: isOvertime ? `${otH}h ${otM}m` : '0h 0m',
     is_overtime: isOvertime,
     overtime_rate: OVERTIME_HOURLY_RATE,
     overtime_salary: salary,
@@ -624,8 +651,8 @@ class DataStore {
     };
   }
 
-  calculateTherapistOvertime(hours) {
-    return calculateTherapistOvertime(hours);
+  calculateTherapistOvertime(hours, minutes = 0) {
+    return calculateTherapistOvertime(hours, minutes);
   }
 
   // Get all therapist hours with optional filtering (date, month, branch, therapist_name)
@@ -681,7 +708,22 @@ class DataStore {
 
     return ALL_THERAPISTS.map((t) => {
       const existing = recordsMap.get(t.name);
-      if (existing) return existing;
+      if (existing) {
+        if (existing.minutes === undefined || existing.formatted_time === undefined) {
+          const calc = calculateTherapistOvertime(existing.hours || 0, existing.minutes || 0);
+          existing.hours = calc.hours;
+          existing.minutes = calc.minutes;
+          existing.total_hours = calc.total_hours;
+          existing.formatted_time = calc.formatted_time;
+          existing.regular_hours = calc.regular_hours;
+          existing.overtime_hours = calc.overtime_hours;
+          existing.overtime_minutes = calc.overtime_minutes;
+          existing.formatted_overtime = calc.formatted_overtime;
+          existing.is_overtime = calc.is_overtime;
+          existing.overtime_salary = calc.overtime_salary;
+        }
+        return existing;
+      }
 
       return {
         id: `th-${t.name.toLowerCase()}-${dateStr}`,
@@ -689,8 +731,13 @@ class DataStore {
         branch: t.branch,
         therapist_name: t.name,
         hours: 0,
+        minutes: 0,
+        total_hours: 0,
+        formatted_time: '0h 0m',
         regular_hours: 0,
         overtime_hours: 0,
+        overtime_minutes: 0,
+        formatted_overtime: '0h 0m',
         is_overtime: false,
         overtime_rate: OVERTIME_HOURLY_RATE,
         overtime_salary: 0,
@@ -715,19 +762,26 @@ class DataStore {
     const updatedEntries = [];
 
     hoursList.forEach((entry) => {
-      const h = Math.max(0, Number(entry.hours) || 0);
+      const h = Math.max(0, parseInt(entry.hours, 10) || 0);
+      const m = Math.max(0, parseInt(entry.minutes, 10) || 0);
       const isOff = !!entry.is_off_day;
       const effectiveHours = isOff ? 0 : h;
-      const calc = calculateTherapistOvertime(effectiveHours);
+      const effectiveMinutes = isOff ? 0 : m;
+      const calc = calculateTherapistOvertime(effectiveHours, effectiveMinutes);
 
       const record = {
         id: entry.id || `th-${entry.therapist_name.toLowerCase()}-${dateStr}`,
         record_date: dateStr,
         branch: entry.branch,
         therapist_name: entry.therapist_name,
-        hours: effectiveHours,
+        hours: calc.hours,
+        minutes: calc.minutes,
+        total_hours: calc.total_hours,
+        formatted_time: calc.formatted_time,
         regular_hours: calc.regular_hours,
         overtime_hours: calc.overtime_hours,
+        overtime_minutes: calc.overtime_minutes,
+        formatted_overtime: calc.formatted_overtime,
         is_overtime: calc.is_overtime,
         overtime_rate: calc.overtime_rate,
         overtime_salary: calc.overtime_salary,
@@ -790,8 +844,10 @@ class DataStore {
         days_worked: 0,
         off_days: 0,
         total_hours: 0,
+        formatted_time: '0h 0m',
         regular_hours: 0,
         overtime_hours: 0,
+        formatted_overtime: '0h 0m',
         overtime_rate: OVERTIME_HOURLY_RATE,
         overtime_salary: 0,
         records: [],
@@ -806,8 +862,10 @@ class DataStore {
           days_worked: 0,
           off_days: 0,
           total_hours: 0,
+          formatted_time: '0h 0m',
           regular_hours: 0,
           overtime_hours: 0,
+          formatted_overtime: '0h 0m',
           overtime_rate: OVERTIME_HOURLY_RATE,
           overtime_salary: 0,
           records: [],
@@ -818,12 +876,18 @@ class DataStore {
 
       if (r.is_off_day) {
         g.off_days += 1;
-      } else if (r.hours > 0) {
-        g.days_worked += 1;
-        g.total_hours = +(g.total_hours + (r.hours || 0)).toFixed(2);
-        g.regular_hours = +(g.regular_hours + (r.regular_hours || 0)).toFixed(2);
-        g.overtime_hours = +(g.overtime_hours + (r.overtime_hours || 0)).toFixed(2);
-        g.overtime_salary = +(g.overtime_salary + (r.overtime_salary || 0)).toFixed(2);
+      } else {
+        const itemTotHours = r.total_hours !== undefined && r.total_hours !== null
+          ? Number(r.total_hours)
+          : (Number(r.hours) || 0) + (Number(r.minutes) || 0) / 60;
+
+        if (itemTotHours > 0) {
+          g.days_worked += 1;
+          g.total_hours = +(g.total_hours + itemTotHours).toFixed(2);
+          g.regular_hours = +(g.regular_hours + (Number(r.regular_hours) || 0)).toFixed(2);
+          g.overtime_hours = +(g.overtime_hours + (Number(r.overtime_hours) || 0)).toFixed(2);
+          g.overtime_salary = +(g.overtime_salary + (Number(r.overtime_salary) || 0)).toFixed(2);
+        }
       }
     });
 
@@ -831,9 +895,9 @@ class DataStore {
 
     // Branch breakdown
     const branchTotals = {
-      'Grand Baie': { hours: 0, regular: 0, overtime: 0, salary: 0, count: 0 },
-      'Curepipe': { hours: 0, regular: 0, overtime: 0, salary: 0, count: 0 },
-      'Moka': { hours: 0, regular: 0, overtime: 0, salary: 0, count: 0 },
+      'Grand Baie': { hours: 0, formatted_time: '0h 0m', regular: 0, overtime: 0, formatted_overtime: '0h 0m', salary: 0, count: 0 },
+      'Curepipe': { hours: 0, formatted_time: '0h 0m', regular: 0, overtime: 0, formatted_overtime: '0h 0m', salary: 0, count: 0 },
+      'Moka': { hours: 0, formatted_time: '0h 0m', regular: 0, overtime: 0, formatted_overtime: '0h 0m', salary: 0, count: 0 },
     };
 
     let grandTotalHours = 0;
@@ -843,6 +907,11 @@ class DataStore {
     let grandDaysWorked = 0;
 
     summaries.forEach((s) => {
+      const totMins = Math.round(s.total_hours * 60);
+      s.formatted_time = `${Math.floor(totMins / 60)}h ${totMins % 60}m`;
+      const otMins = Math.round(s.overtime_hours * 60);
+      s.formatted_overtime = `${Math.floor(otMins / 60)}h ${otMins % 60}m`;
+
       grandTotalHours = +(grandTotalHours + s.total_hours).toFixed(2);
       grandRegularHours = +(grandRegularHours + s.regular_hours).toFixed(2);
       grandOvertimeHours = +(grandOvertimeHours + s.overtime_hours).toFixed(2);
@@ -856,6 +925,27 @@ class DataStore {
         branchTotals[s.branch].salary = +(branchTotals[s.branch].salary + s.overtime_salary).toFixed(2);
         branchTotals[s.branch].count += 1;
       }
+    });
+
+    Object.keys(branchTotals).forEach((bName) => {
+      const bt = branchTotals[bName];
+      const totM = Math.round(bt.hours * 60);
+      bt.formatted_time = `${Math.floor(totM / 60)}h ${totM % 60}m`;
+      const otM = Math.round(bt.overtime * 60);
+      bt.formatted_overtime = `${Math.floor(otM / 60)}h ${otM % 60}m`;
+    });
+
+    const grandTotM = Math.round(grandTotalHours * 60);
+    const grandOtM = Math.round(grandOvertimeHours * 60);
+    const grandTotals = {
+      total_hours: grandTotalHours,
+      formatted_time: `${Math.floor(grandTotM / 60)}h ${grandTotM % 60}m`,
+      regular_hours: grandRegularHours,
+      overtime_hours: grandOvertimeHours,
+      formatted_overtime: `${Math.floor(grandOtM / 60)}h ${grandOtM % 60}m`,
+      overtime_salary: grandOvertimeSalary,
+      days_worked: grandDaysWorked,
+    };
     });
 
     return {

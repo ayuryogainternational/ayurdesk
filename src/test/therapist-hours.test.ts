@@ -14,17 +14,43 @@ export const THERAPIST_BRANCHES = {
 export const OVERTIME_HOURS_THRESHOLD = 5.0;
 export const OVERTIME_HOURLY_RATE = 75; // MUR
 
-export function calculateTherapistOvertime(hours: number) {
-  const h = Math.max(0, Number(hours) || 0);
-  const regular = Math.min(OVERTIME_HOURS_THRESHOLD, h);
-  const overtime = +(Math.max(0, h - OVERTIME_HOURS_THRESHOLD)).toFixed(2);
-  const isOvertime = h > OVERTIME_HOURS_THRESHOLD;
-  const salary = +(overtime * OVERTIME_HOURLY_RATE).toFixed(2);
+export function calculateTherapistOvertime(hours: number, minutes = 0) {
+  const hInput = Math.max(0, Number(hours) || 0);
+  const mInput = Math.max(0, Number(minutes) || 0);
+
+  // If decimal hours provided without separate minutes (e.g., 5.5, 0)
+  let totalMinutes = 0;
+  if (mInput === 0 && hInput % 1 !== 0) {
+    totalMinutes = Math.round(hInput * 60);
+  } else {
+    totalMinutes = Math.floor(hInput) * 60 + Math.round(mInput);
+  }
+
+  const hDisplay = Math.floor(totalMinutes / 60);
+  const mDisplay = totalMinutes % 60;
+  const totalHoursDecimal = +(totalMinutes / 60).toFixed(2);
+
+  const regularMinutes = Math.min(OVERTIME_HOURS_THRESHOLD * 60, totalMinutes);
+  const regularHoursDecimal = +(regularMinutes / 60).toFixed(2);
+
+  const overtimeMinutes = Math.max(0, totalMinutes - OVERTIME_HOURS_THRESHOLD * 60);
+  const overtimeHoursDecimal = +(overtimeMinutes / 60).toFixed(2);
+  const isOvertime = totalMinutes > OVERTIME_HOURS_THRESHOLD * 60;
+
+  const otH = Math.floor(overtimeMinutes / 60);
+  const otM = overtimeMinutes % 60;
+
+  const salary = +(overtimeHoursDecimal * OVERTIME_HOURLY_RATE).toFixed(2);
 
   return {
-    hours: h,
-    regular_hours: regular,
-    overtime_hours: overtime,
+    hours: hDisplay,
+    minutes: mDisplay,
+    total_hours: totalHoursDecimal,
+    formatted_time: `${hDisplay}h ${mDisplay}m`,
+    regular_hours: regularHoursDecimal,
+    overtime_hours: overtimeHoursDecimal,
+    overtime_minutes: overtimeMinutes,
+    formatted_overtime: isOvertime ? `${otH}h ${otM}m` : '0h 0m',
     is_overtime: isOvertime,
     overtime_rate: OVERTIME_HOURLY_RATE,
     overtime_salary: salary,
@@ -84,7 +110,7 @@ describe('Overtime & Remuneration Calculation (>5h threshold @ 75 MUR/hr)', () =
     expect(fourHours.is_overtime).toBe(false);
     expect(fourHours.overtime_salary).toBe(0);
 
-    const exactlyFive = calculateTherapistOvertime(5.0);
+    const exactlyFive = calculateTherapistOvertime(5, 0);
     expect(exactlyFive.regular_hours).toBe(5.0);
     expect(exactlyFive.overtime_hours).toBe(0);
     expect(exactlyFive.is_overtime).toBe(false);
@@ -92,7 +118,7 @@ describe('Overtime & Remuneration Calculation (>5h threshold @ 75 MUR/hr)', () =
   });
 
   it('calculates 1.0 hour overtime = 75 MUR for 6 hours work', () => {
-    const result = calculateTherapistOvertime(6.0);
+    const result = calculateTherapistOvertime(6, 0);
     expect(result.regular_hours).toBe(5.0);
     expect(result.overtime_hours).toBe(1.0);
     expect(result.is_overtime).toBe(true);
@@ -108,19 +134,87 @@ describe('Overtime & Remuneration Calculation (>5h threshold @ 75 MUR/hr)', () =
   });
 
   it('calculates 2.5 hours overtime = 187.50 MUR for 7.5 hours work', () => {
-    const result = calculateTherapistOvertime(7.5);
+    const result = calculateTherapistOvertime(7, 30);
+    expect(result.formatted_time).toBe('7h 30m');
     expect(result.regular_hours).toBe(5.0);
     expect(result.overtime_hours).toBe(2.5);
+    expect(result.formatted_overtime).toBe('2h 30m');
     expect(result.is_overtime).toBe(true);
     expect(result.overtime_salary).toBe(187.5);
   });
 
   it('calculates 3.0 hours overtime = 225.00 MUR for 8.0 hours work', () => {
-    const result = calculateTherapistOvertime(8.0);
+    const result = calculateTherapistOvertime(8, 0);
     expect(result.regular_hours).toBe(5.0);
     expect(result.overtime_hours).toBe(3.0);
     expect(result.is_overtime).toBe(true);
     expect(result.overtime_salary).toBe(225.0);
+  });
+});
+
+describe('Custom Minutes Precision & Overtime Handling', () => {
+  it('calculates exact overtime for 5 hours 15 minutes (15 mins OT = 18.75 MUR)', () => {
+    const res = calculateTherapistOvertime(5, 15);
+    expect(res.formatted_time).toBe('5h 15m');
+    expect(res.total_hours).toBe(5.25);
+    expect(res.overtime_hours).toBe(0.25);
+    expect(res.overtime_minutes).toBe(15);
+    expect(res.formatted_overtime).toBe('0h 15m');
+    expect(res.is_overtime).toBe(true);
+    expect(res.overtime_salary).toBe(18.75); // 0.25 * 75 = 18.75
+  });
+
+  it('calculates exact overtime for 5 hours 30 minutes (30 mins OT = 37.50 MUR)', () => {
+    const res = calculateTherapistOvertime(5, 30);
+    expect(res.formatted_time).toBe('5h 30m');
+    expect(res.total_hours).toBe(5.5);
+    expect(res.overtime_hours).toBe(0.5);
+    expect(res.overtime_minutes).toBe(30);
+    expect(res.formatted_overtime).toBe('0h 30m');
+    expect(res.is_overtime).toBe(true);
+    expect(res.overtime_salary).toBe(37.5); // 0.5 * 75 = 37.50
+  });
+
+  it('calculates exact overtime for 5 hours 45 minutes (45 mins OT = 56.25 MUR)', () => {
+    const res = calculateTherapistOvertime(5, 45);
+    expect(res.formatted_time).toBe('5h 45m');
+    expect(res.total_hours).toBe(5.75);
+    expect(res.overtime_hours).toBe(0.75);
+    expect(res.overtime_minutes).toBe(45);
+    expect(res.formatted_overtime).toBe('0h 45m');
+    expect(res.is_overtime).toBe(true);
+    expect(res.overtime_salary).toBe(56.25); // 0.75 * 75 = 56.25
+  });
+
+  it('calculates exact overtime for 6 hours 15 minutes (1h 15m OT = 93.75 MUR)', () => {
+    const res = calculateTherapistOvertime(6, 15);
+    expect(res.formatted_time).toBe('6h 15m');
+    expect(res.total_hours).toBe(6.25);
+    expect(res.overtime_hours).toBe(1.25);
+    expect(res.overtime_minutes).toBe(75);
+    expect(res.formatted_overtime).toBe('1h 15m');
+    expect(res.is_overtime).toBe(true);
+    expect(res.overtime_salary).toBe(93.75); // 1.25 * 75 = 93.75
+  });
+
+  it('calculates exact overtime for 7 hours 45 minutes (2h 45m OT = 206.25 MUR)', () => {
+    const res = calculateTherapistOvertime(7, 45);
+    expect(res.formatted_time).toBe('7h 45m');
+    expect(res.total_hours).toBe(7.75);
+    expect(res.overtime_hours).toBe(2.75);
+    expect(res.overtime_minutes).toBe(165);
+    expect(res.formatted_overtime).toBe('2h 45m');
+    expect(res.is_overtime).toBe(true);
+    expect(res.overtime_salary).toBe(206.25); // 2.75 * 75 = 206.25
+  });
+
+  it('handles fractional minutes under 5 hours without overtime (e.g. 4h 50m)', () => {
+    const res = calculateTherapistOvertime(4, 50);
+    expect(res.formatted_time).toBe('4h 50m');
+    expect(res.total_hours).toBe(4.83);
+    expect(res.overtime_hours).toBe(0);
+    expect(res.is_overtime).toBe(false);
+    expect(res.overtime_salary).toBe(0);
   });
 });
 

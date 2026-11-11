@@ -1179,6 +1179,104 @@ body {
   border-color: var(--forest-600);
 }
 
+/* Time Input Dual Controls (Hours + Custom Minutes) */
+.time-input-dual-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.25rem 0.4rem;
+  transition: border-color 0.15s ease;
+}
+
+.time-input-dual-group:focus-within {
+  border-color: var(--forest-600);
+  box-shadow: 0 0 0 2px rgba(16, 59, 55, 0.1);
+  background: #ffffff;
+}
+
+.time-input-box {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.time-number-input {
+  width: 44px;
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  text-align: center;
+  color: var(--forest-900);
+  padding: 0.15rem 0.1rem;
+  outline: none;
+}
+
+.time-number-input:disabled {
+  color: var(--slate-400);
+  cursor: not-allowed;
+}
+
+.time-unit-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--slate-400);
+  text-transform: uppercase;
+}
+
+.time-colon {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--slate-400);
+}
+
+.minute-chips-bar {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.minute-chip {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  padding: 0.18rem 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--slate-700);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.minute-chip:hover:not(:disabled) {
+  background: var(--forest-600);
+  color: #ffffff;
+  border-color: var(--forest-600);
+}
+
+.minute-chip.chip-action {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.minute-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.time-total-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--forest-900);
+  background: #f1f5f9;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
 .ot-badge {
   display: inline-flex;
   align-items: center;

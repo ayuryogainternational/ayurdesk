@@ -149,15 +149,15 @@ export function exportToPdf({
       valign: 'middle',
     },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 24 },
-      1: { halign: 'left', cellWidth: 38 },
-      1: { halign: 'right', cellWidth: 34 },
-      2: { halign: 'right', cellWidth: 34 },
-      3: { halign: 'right', cellWidth: 36 },
-      4: { halign: 'right', cellWidth: 34 },
-      5: { halign: 'right', cellWidth: 40 },
+      0: { halign: 'center', cellWidth: 22 },
+      1: { halign: 'left', cellWidth: 36 },
+      2: { halign: 'right', cellWidth: 30 },
+      3: { halign: 'right', cellWidth: 30 },
+      4: { halign: 'right', cellWidth: 32 },
+      5: { halign: 'right', cellWidth: 30 },
       6: { halign: 'right', cellWidth: 36 },
-      7: { halign: 'right', cellWidth: 29 },
+      7: { halign: 'right', cellWidth: 32 },
+      8: { halign: 'right', cellWidth: 26 },
     },
     didParseCell: (data) => {
       // Highlight the last totals row

@@ -22,8 +22,13 @@ export interface TherapistDailyHours {
   branch: BranchName;
   therapist_name: string;
   hours: number;
+  minutes?: number;
+  total_hours?: number;
+  formatted_time?: string;
   regular_hours: number;
   overtime_hours: number;
+  overtime_minutes?: number;
+  formatted_overtime?: string;
   is_overtime: boolean;
   overtime_rate: number; // 75 MUR
   overtime_salary: number; // overtime_hours * 75
@@ -42,8 +47,10 @@ export interface TherapistMonthlySummary {
   branch: BranchName;
   days_worked: number;
   total_hours: number;
+  formatted_time?: string;
   regular_hours: number;
   overtime_hours: number;
+  formatted_overtime?: string;
   overtime_rate: number;
   overtime_salary: number;
 }

@@ -376,10 +376,11 @@ async function renderTherapistReportPreview(scope, singleDate, startDate, endDat
   let grandSalary = 0;
 
   scopedTherapistRecords.forEach((r) => {
-    const h = Number(r.hours) || 0;
-    const reg = Number(r.regular_hours) || 0;
-    const ot = Number(r.overtime_hours) || 0;
-    const sal = Number(r.overtime_salary) || 0;
+    const calc = window.dataStore.calculateTherapistOvertime(r.hours || 0, r.minutes || 0);
+    const h = r.is_off_day ? 0 : calc.total_hours;
+    const reg = r.is_off_day ? 0 : calc.regular_hours;
+    const ot = r.is_off_day ? 0 : calc.overtime_hours;
+    const sal = r.is_off_day ? 0 : calc.overtime_salary;
 
     grandHours += h;
     grandRegular += reg;
@@ -393,20 +394,29 @@ async function renderTherapistReportPreview(scope, singleDate, startDate, endDat
     }
   });
 
-  document.getElementById('ot-summary-grandbaie').textContent =
-    `${branches['Grand Baie'].hours.toFixed(1)}h • MUR ${branches['Grand Baie'].salary.toFixed(2)}`;
-  document.getElementById('ot-summary-curepipe').textContent =
-    `${branches['Curepipe'].hours.toFixed(1)}h • MUR ${branches['Curepipe'].salary.toFixed(2)}`;
-  document.getElementById('ot-summary-moka').textContent =
-    `${branches['Moka'].hours.toFixed(1)}h • MUR ${branches['Moka'].salary.toFixed(2)}`;
+  const grandTotM = Math.round(grandHours * 60);
+  const grandOtM = Math.round(grandOvertime * 60);
+  const formattedGrandHours = `${Math.floor(grandTotM / 60)}h ${grandTotM % 60}m`;
+  const formattedGrandOt = `${Math.floor(grandOtM / 60)}h ${grandOtM % 60}m`;
+
+  ['Grand Baie', 'Curepipe', 'Moka'].forEach((bName) => {
+    const b = branches[bName];
+    const bMins = Math.round(b.hours * 60);
+    const bSlug = bName.toLowerCase().replace(/\s+/g, '');
+    const el = document.getElementById(`ot-summary-${bSlug}`);
+    if (el) {
+      el.textContent = `${Math.floor(bMins / 60)}h ${bMins % 60}m • MUR ${b.salary.toFixed(2)}`;
+    }
+  });
+
   document.getElementById('ot-summary-total-pay').textContent = `MUR ${grandSalary.toFixed(2)}`;
   document.getElementById('ot-summary-total-hours').textContent =
-    `${grandOvertime.toFixed(1)} OT Hours (>5h) across active clinics`;
+    `+${formattedGrandOt} (${grandOvertime.toFixed(2)}h) OT Hours (>5h) across active clinics`;
 
   document.getElementById('export-summary-text').textContent =
     `Therapist Overtime Roster (${branchFilter.toUpperCase()})`;
   document.getElementById('export-metrics-text').textContent =
-    `Shifts Logged: ${scopedTherapistRecords.length} | Total Hours: ${grandHours.toFixed(1)} | Overtime Hours: ${grandOvertime.toFixed(1)} | Overtime Pay: MUR ${grandSalary.toFixed(2)}`;
+    `Shifts Logged: ${scopedTherapistRecords.length} | Total: ${formattedGrandHours} (${grandHours.toFixed(2)}h) | Overtime: +${formattedGrandOt} (${grandOvertime.toFixed(2)}h) | Overtime Pay: MUR ${grandSalary.toFixed(2)}`;
 
   // Update Table Header
   const thead = document.getElementById('export-preview-head');
@@ -416,7 +426,7 @@ async function renderTherapistReportPreview(scope, singleDate, startDate, endDat
         <th>Date</th>
         <th>Therapist Name</th>
         <th>Branch</th>
-        <th class="numeric">Working Hours</th>
+        <th class="numeric">Working Time</th>
         <th class="numeric">Regular (≤ 5h)</th>
         <th class="numeric">Overtime (> 5h)</th>
         <th class="numeric">Rate</th>
@@ -437,20 +447,23 @@ async function renderTherapistReportPreview(scope, singleDate, startDate, endDat
 
   tbody.innerHTML = scopedTherapistRecords
     .map((r) => {
-      const isOt = r.overtime_hours > 0;
+      const calc = window.dataStore.calculateTherapistOvertime(r.hours || 0, r.minutes || 0);
+      const isOt = calc.is_overtime && !r.is_off_day;
       return `
         <tr>
           <td style="font-weight: 600; color: var(--forest-900);">${window.formatDateDisplay(r.record_date)}</td>
           <td style="font-weight: 700; color: var(--forest-900);">${r.therapist_name}</td>
           <td><span class="badge">${r.branch}</span></td>
-          <td class="numeric" style="font-weight: 700;">${Number(r.hours).toFixed(1)}</td>
-          <td class="numeric">${Number(r.regular_hours).toFixed(1)}</td>
+          <td class="numeric" style="font-weight: 700;">
+            ${r.is_off_day ? 'Off' : `${calc.formatted_time} <span style="font-size: 0.6875rem; color: var(--slate-400);">(${calc.total_hours.toFixed(2)}h)</span>`}
+          </td>
+          <td class="numeric">${r.is_off_day ? '0.0' : calc.regular_hours.toFixed(2)}</td>
           <td class="numeric" style="font-weight: 700; color: ${isOt ? '#b45309' : 'inherit'};">
-            ${isOt ? `+${Number(r.overtime_hours).toFixed(1)}` : '0.0'}
+            ${isOt ? `+${calc.formatted_overtime} (${calc.overtime_hours.toFixed(2)}h)` : '0h 0m'}
           </td>
           <td class="numeric" style="color: var(--slate-500);">MUR 75</td>
           <td class="numeric" style="font-weight: 800; color: ${isOt ? 'var(--forest-900)' : 'var(--slate-400)'};">
-            MUR ${Number(r.overtime_salary).toFixed(2)}
+            MUR ${calc.overtime_salary.toFixed(2)}
           </td>
           <td style="font-size: 0.75rem; color: var(--slate-500);">${r.updated_by_name || r.created_by_name || 'Staff'}</td>
         </tr>
@@ -464,9 +477,9 @@ async function renderTherapistReportPreview(scope, singleDate, startDate, endDat
         <td colspan="3" style="font-weight: 800; color: #92400e; padding: 0.75rem 0.875rem;">
           COMBINED OVERTIME TOTAL (> 5h @ 75 MUR/hr)
         </td>
-        <td class="numeric" style="font-weight: 800; color: #92400e;">${grandHours.toFixed(1)}</td>
-        <td class="numeric" style="font-weight: 800; color: #92400e;">${grandRegular.toFixed(1)}</td>
-        <td class="numeric" style="font-weight: 800; color: #b45309;">+${grandOvertime.toFixed(1)}</td>
+        <td class="numeric" style="font-weight: 800; color: #92400e;">${formattedGrandHours} (${grandHours.toFixed(2)}h)</td>
+        <td class="numeric" style="font-weight: 800; color: #92400e;">${grandRegular.toFixed(2)}</td>
+        <td class="numeric" style="font-weight: 800; color: #b45309;">+${formattedGrandOt} (${grandOvertime.toFixed(2)}h)</td>
         <td class="numeric" style="font-weight: 800; color: #92400e;">MUR 75</td>
         <td class="numeric" style="font-weight: 800; color: #78350f; font-size: 1rem;">MUR ${grandSalary.toFixed(2)}</td>
         <td>-</td>
@@ -675,9 +688,11 @@ async function exportTherapistExcel() {
       'Date',
       'Therapist Name',
       'Branch',
-      'Working Hours',
+      'Working Time (h & m)',
+      'Total Hours (Decimal)',
       'Regular Hours (≤ 5h)',
-      'Overtime Hours (> 5h)',
+      'Overtime (h & m)',
+      'Overtime Hours (Decimal)',
       'Overtime Rate (MUR)',
       'Overtime Pay (MUR)',
       'Recorded By',
@@ -692,10 +707,11 @@ async function exportTherapistExcel() {
     let grandHours = 0, grandReg = 0, grandOt = 0, grandSal = 0;
 
     scopedTherapistRecords.forEach((r) => {
-      const h = Number(r.hours) || 0;
-      const reg = Number(r.regular_hours) || 0;
-      const ot = Number(r.overtime_hours) || 0;
-      const sal = Number(r.overtime_salary) || 0;
+      const calc = window.dataStore.calculateTherapistOvertime(r.hours || 0, r.minutes || 0);
+      const h = r.is_off_day ? 0 : calc.total_hours;
+      const reg = r.is_off_day ? 0 : calc.regular_hours;
+      const ot = r.is_off_day ? 0 : calc.overtime_hours;
+      const sal = r.is_off_day ? 0 : calc.overtime_salary;
 
       grandHours += h;
       grandReg += reg;
@@ -706,20 +722,29 @@ async function exportTherapistExcel() {
         r.record_date,
         r.therapist_name,
         r.branch,
+        r.is_off_day ? 'Off Day' : calc.formatted_time,
         h,
         reg,
+        ot > 0 ? calc.formatted_overtime : '0h 0m',
         ot,
         75,
         sal,
         r.updated_by_name || r.created_by_name || 'Staff',
       ]);
       row.height = 20;
-      row.getCell(4).numFmt = '#,##0.0';
-      row.getCell(5).numFmt = '#,##0.0';
-      row.getCell(6).numFmt = '#,##0.0';
-      row.getCell(7).numFmt = '"MUR " #,##0.00';
-      row.getCell(8).numFmt = '"MUR " #,##0.00';
+      row.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell(5).numFmt = '#,##0.00';
+      row.getCell(6).numFmt = '#,##0.00';
+      row.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell(8).numFmt = '#,##0.00';
+      row.getCell(9).numFmt = '"MUR " #,##0.00';
+      row.getCell(10).numFmt = '"MUR " #,##0.00';
     });
+
+    const grandTotM = Math.round(grandHours * 60);
+    const grandOtM = Math.round(grandOt * 60);
+    const formattedGrandHours = `${Math.floor(grandTotM / 60)}h ${grandTotM % 60}m`;
+    const formattedGrandOt = `${Math.floor(grandOtM / 60)}h ${grandOtM % 60}m`;
 
     // Grand Total Row
     sheet.addRow([]);
@@ -727,8 +752,10 @@ async function exportTherapistExcel() {
       'GRAND TOTAL',
       'ALL 12 THERAPISTS',
       '3 BRANCHES',
+      formattedGrandHours,
       grandHours,
       grandReg,
+      formattedGrandOt,
       grandOt,
       75,
       grandSal,
@@ -739,19 +766,23 @@ async function exportTherapistExcel() {
       cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF103B37' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
     });
-    grandRow.getCell(4).numFmt = '#,##0.0';
-    grandRow.getCell(5).numFmt = '#,##0.0';
-    grandRow.getCell(6).numFmt = '#,##0.0';
-    grandRow.getCell(7).numFmt = '"MUR " #,##0.00';
-    grandRow.getCell(8).numFmt = '"MUR " #,##0.00';
+    grandRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
+    grandRow.getCell(5).numFmt = '#,##0.00';
+    grandRow.getCell(6).numFmt = '#,##0.00';
+    grandRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+    grandRow.getCell(8).numFmt = '#,##0.00';
+    grandRow.getCell(9).numFmt = '"MUR " #,##0.00';
+    grandRow.getCell(10).numFmt = '"MUR " #,##0.00';
 
     sheet.columns = [
       { width: 14 },
       { width: 20 },
       { width: 16 },
-      { width: 16 },
-      { width: 18 },
+      { width: 22 },
       { width: 20 },
+      { width: 20 },
+      { width: 20 },
+      { width: 22 },
       { width: 20 },
       { width: 24 },
       { width: 18 },
@@ -866,9 +897,10 @@ function exportTherapistPdf() {
   let grandHours = 0, grandOt = 0, grandSal = 0;
 
   const tableData = scopedTherapistRecords.map((r) => {
-    const h = Number(r.hours) || 0;
-    const ot = Number(r.overtime_hours) || 0;
-    const sal = Number(r.overtime_salary) || 0;
+    const calc = window.dataStore.calculateTherapistOvertime(r.hours || 0, r.minutes || 0);
+    const h = r.is_off_day ? 0 : calc.total_hours;
+    const ot = r.is_off_day ? 0 : calc.overtime_hours;
+    const sal = r.is_off_day ? 0 : calc.overtime_salary;
     grandHours += h;
     grandOt += ot;
     grandSal += sal;
@@ -877,22 +909,27 @@ function exportTherapistPdf() {
       r.record_date,
       r.therapist_name,
       r.branch,
-      h.toFixed(1),
-      Number(r.regular_hours || 0).toFixed(1),
-      ot > 0 ? `+${ot.toFixed(1)}` : '0.0',
+      r.is_off_day ? 'Off Day' : `${calc.formatted_time} (${h.toFixed(2)}h)`,
+      r.is_off_day ? '0.0' : calc.regular_hours.toFixed(2),
+      ot > 0 ? `+${calc.formatted_overtime} (${ot.toFixed(2)}h)` : '0h 0m',
       'MUR 75',
       `MUR ${sal.toFixed(2)}`,
       r.updated_by_name || 'Staff',
     ];
   });
 
+  const grandTotM = Math.round(grandHours * 60);
+  const grandOtM = Math.round(grandOt * 60);
+  const formattedGrandHours = `${Math.floor(grandTotM / 60)}h ${grandTotM % 60}m`;
+  const formattedGrandOt = `${Math.floor(grandOtM / 60)}h ${grandOtM % 60}m`;
+
   tableData.push([
     'COMBINED TOTAL',
     '12 Therapists',
     '3 Branches',
-    grandHours.toFixed(1),
+    `${formattedGrandHours} (${grandHours.toFixed(2)}h)`,
     '-',
-    `+${grandOt.toFixed(1)}`,
+    `+${formattedGrandOt} (${grandOt.toFixed(2)}h)`,
     'MUR 75',
     `MUR ${grandSal.toFixed(2)}`,
     'Verified',
@@ -900,7 +937,7 @@ function exportTherapistPdf() {
 
   doc.autoTable({
     startY: 26,
-    head: [['Date', 'Therapist', 'Branch', 'Hours', 'Regular (≤5h)', 'Overtime (>5h)', 'Rate', 'Overtime Pay', 'Recorded By']],
+    head: [['Date', 'Therapist', 'Branch', 'Working Time', 'Regular (≤5h)', 'Overtime (>5h)', 'Rate', 'Overtime Pay', 'Recorded By']],
     body: tableData,
     theme: 'grid',
     headStyles: { fillColor: [16, 59, 55], textColor: 255 },
