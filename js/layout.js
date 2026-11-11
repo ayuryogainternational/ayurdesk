@@ -10,28 +10,18 @@ function initAppLayout(activePageKey) {
   // 1. Render Sidebar
   const sidebarContainer = document.getElementById('app-sidebar');
   if (sidebarContainer) {
-    let navItems = [];
-
-    if (user?.role === 'therapist') {
-      navItems = [
-        { key: 'therapist-portal', href: 'therapist-portal.html', label: 'Therapist Duty & Works', icon: 'heart-pulse' },
-        { key: 'settings', href: 'settings.html', label: 'Settings', icon: 'settings' },
-      ];
-    } else {
-      navItems = [
-        { key: 'dashboard', href: 'index.html', label: 'Dashboard', icon: 'layout-dashboard' },
-        { key: 'daily-entry', href: 'daily-entry.html', label: 'Add Daily Report', icon: 'plus-circle' },
-        { key: 'records', href: 'records.html', label: 'All Records', icon: 'table-properties' },
-        { key: 'analytics', href: 'analytics.html', label: 'Analytics', icon: 'bar-chart-3' },
-        // Admin Items
-        { key: 'reports', href: 'reports.html', label: 'Reception Reports', icon: 'file-spreadsheet', adminOnly: true },
-        { key: 'therapist-reports', href: 'therapist-reports.html', label: 'Therapist Reports', icon: 'stethoscope', adminOnly: true },
-        { key: 'users', href: 'users.html', label: 'User Management', icon: 'users', adminOnly: true },
-        { key: 'audit-logs', href: 'audit-logs.html', label: 'Audit Logs', icon: 'history', adminOnly: true },
-        // General
-        { key: 'settings', href: 'settings.html', label: 'Settings', icon: 'settings' },
-      ];
-    }
+    const navItems = [
+      { key: 'dashboard', href: 'index.html', label: 'Dashboard', icon: 'layout-dashboard' },
+      { key: 'daily-entry', href: 'daily-entry.html', label: 'Add Daily Report', icon: 'plus-circle' },
+      { key: 'records', href: 'records.html', label: 'All Records', icon: 'table-properties' },
+      { key: 'analytics', href: 'analytics.html', label: 'Analytics', icon: 'bar-chart-3' },
+      // Admin Items
+      { key: 'reports', href: 'reports.html', label: 'Export Reports', icon: 'file-spreadsheet', adminOnly: true },
+      { key: 'users', href: 'users.html', label: 'User Management', icon: 'users', adminOnly: true },
+      { key: 'audit-logs', href: 'audit-logs.html', label: 'Audit Logs', icon: 'history', adminOnly: true },
+      // General
+      { key: 'settings', href: 'settings.html', label: 'Settings', icon: 'settings' },
+    ];
 
     let navHtml = `
       <div class="sidebar-header">
@@ -45,7 +35,7 @@ function initAppLayout(activePageKey) {
       </div>
 
       <nav class="sidebar-nav">
-        <div class="nav-section-label">${user?.role === 'therapist' ? 'Therapist Desk' : 'Operations'}</div>
+        <div class="nav-section-label">Operations</div>
     `;
 
     navItems.forEach((item, index) => {

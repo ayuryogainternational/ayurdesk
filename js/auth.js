@@ -25,13 +25,6 @@ const DEMO_USERS = {
     role: 'staff',
     must_change_password: true,
   },
-  vishnu: {
-    id: '5a06a587-9d74-4de1-bc70-8ee5f9de5ac3',
-    email: 'vishnu@ayuryoga.com',
-    full_name: 'Dr. Vishnu (Ayurvedic Therapist)',
-    role: 'therapist',
-    must_change_password: false,
-  },
 };
 
 const AUTH_STORAGE_KEY = 'ayurdesk_auth_user_v2';
@@ -47,10 +40,9 @@ class AuthManager {
     try {
       const { data } = await window.supabaseClient.auth.getSession();
       if (!data?.session && this.currentUser.email) {
-        const pwd = this.currentUser.email.includes('vishnu') ? '@Ayuryoga2026' : 'ChangeMe123!';
         await window.supabaseClient.auth.signInWithPassword({
           email: this.currentUser.email,
-          password: pwd,
+          password: 'ChangeMe123!',
         });
       }
     } catch (err) {
@@ -79,11 +71,6 @@ class AuthManager {
     return user && user.role === 'admin';
   }
 
-  isTherapist() {
-    const user = this.getCurrentUser();
-    return user && user.role === 'therapist';
-  }
-
   isStaff() {
     const user = this.getCurrentUser();
     return user && user.role === 'staff';
@@ -103,7 +90,6 @@ class AuthManager {
           let detectedRole = data.user.user_metadata?.role;
           if (!detectedRole) {
             if (emailLower.includes('admin') || emailLower.includes('owner')) detectedRole = 'admin';
-            else if (emailLower.includes('vishnu') || emailLower.includes('therapist')) detectedRole = 'therapist';
             else detectedRole = 'staff';
           }
 
@@ -128,11 +114,6 @@ class AuthManager {
       const user = DEMO_USERS.admin;
       this.setUser(user);
       this.syncSupabaseLogin(user.email, 'ChangeMe123!');
-      return { success: true, user };
-    } else if (cleanEmail.includes('vishnu') || cleanEmail.includes('therapist')) {
-      const user = DEMO_USERS.vishnu;
-      this.setUser(user);
-      this.syncSupabaseLogin(user.email, '@Ayuryoga2026');
       return { success: true, user };
     } else if (cleanEmail.includes('shilpa')) {
       const user = DEMO_USERS.shilpa;
@@ -174,26 +155,14 @@ class AuthManager {
   signInDemo(key) {
     const user = DEMO_USERS[key] || DEMO_USERS.admin;
     this.setUser(user);
-    const pwd = key === 'vishnu' ? '@Ayuryoga2026' : 'ChangeMe123!';
-    this.syncSupabaseLogin(user.email, pwd);
+    this.syncSupabaseLogin(user.email, 'ChangeMe123!');
     return user;
   }
 
   async switchDemoUser(key) {
     const user = this.signInDemo(key);
-    const pwd = key === 'vishnu' ? '@Ayuryoga2026' : 'ChangeMe123!';
-    await this.syncSupabaseLogin(user.email, pwd);
-
-    if (key === 'vishnu') {
-      window.location.href = 'therapist-portal.html';
-    } else {
-      const currentPath = window.location.pathname.split('/').pop() || 'index.html';
-      if (currentPath === 'therapist-portal.html') {
-        window.location.href = 'index.html';
-      } else {
-        window.location.reload();
-      }
-    }
+    await this.syncSupabaseLogin(user.email, 'ChangeMe123!');
+    window.location.reload();
   }
 
   setUser(user) {
@@ -214,7 +183,7 @@ class AuthManager {
     window.location.href = 'login.html';
   }
 
-  requireAuth(options = false) {
+  requireAuth(adminOnly = false) {
     const user = this.getCurrentUser();
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
 
@@ -223,31 +192,16 @@ class AuthManager {
       return false;
     }
 
-    // Support legacy boolean argument (adminOnly: true)
-    const adminOnly = typeof options === 'boolean' ? options : options?.adminOnly;
-    const therapistOnly = typeof options === 'object' ? options?.therapistOnly : false;
-    const deskOnly = typeof options === 'object' ? options?.deskOnly : false;
+    const isAdminRequired = typeof adminOnly === 'boolean' ? adminOnly : adminOnly?.adminOnly;
 
-    if (adminOnly && user.role !== 'admin') {
+    if (isAdminRequired && user.role !== 'admin') {
       alert('Access restricted: This section requires Administrator permissions.');
-      window.location.href = user.role === 'therapist' ? 'therapist-portal.html' : 'index.html';
-      return false;
-    }
-
-    if (therapistOnly && user.role !== 'therapist' && user.role !== 'admin') {
-      alert('Access restricted: This portal is for Ayurvedic Therapists.');
       window.location.href = 'index.html';
       return false;
-    }
-
-    if (deskOnly && user.role === 'therapist') {
-      window.location.href = 'therapist-portal.html';
-      return false;
-    }
+      }
 
     return true;
   }
 }
 
 window.authManager = new AuthManager();
-
