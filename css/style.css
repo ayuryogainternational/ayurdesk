@@ -1041,6 +1041,183 @@ body {
   background-color: var(--forest-50);
 }
 
+/* Therapist Working Hours & Overtime System */
+.branch-section {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.branch-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: var(--warm-50);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.branch-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--forest-900);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.branch-badge-moka {
+  background: #e0e7ff;
+  color: #3730a3;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+}
+
+.branch-badge-grandbaie {
+  background: #ccfbf1;
+  color: #115e59;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+}
+
+.branch-badge-curepipe {
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+}
+
+.therapist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.therapist-item-card {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1rem;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.therapist-item-card:hover {
+  border-color: var(--forest-500);
+  box-shadow: 0 2px 8px rgba(16, 59, 55, 0.06);
+}
+
+.therapist-item-card.is-overtime {
+  border-color: #f59e0b;
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+}
+
+.therapist-item-card.is-off {
+  opacity: 0.65;
+  background: #f8fafc;
+}
+
+.therapist-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.therapist-info {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.therapist-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--forest-100);
+  color: var(--forest-800);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: 1px solid var(--forest-200);
+}
+
+.therapist-name {
+  font-weight: 700;
+  color: var(--forest-900);
+  font-size: 0.9375rem;
+}
+
+.quick-hour-btn {
+  background: #f1f5f9;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--slate-700);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-hour-btn:hover {
+  background: var(--forest-600);
+  color: #ffffff;
+  border-color: var(--forest-600);
+}
+
+.ot-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.standard-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  border-radius: 6px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.branch-subtotal-row {
+  background-color: var(--warm-50);
+  font-weight: 700;
+  color: var(--forest-900);
+}
+
+.grand-total-row {
+  background-color: var(--forest-50);
+  font-weight: 800;
+  color: var(--forest-900);
+  border-top: 2px solid var(--forest-600);
+}
+
 /* Responsive adjustments */
 @media (max-width: 1024px) {
   .sidebar {

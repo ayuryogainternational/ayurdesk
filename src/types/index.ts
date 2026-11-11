@@ -4,6 +4,7 @@
 // ====================================================================
 
 export type UserRole = 'admin' | 'staff';
+export type BranchName = 'Grand Baie' | 'Curepipe' | 'Moka';
 
 export interface Profile {
   id: string;
@@ -13,6 +14,38 @@ export interface Profile {
   must_change_password: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface TherapistDailyHours {
+  id: string;
+  record_date: string; // YYYY-MM-DD
+  branch: BranchName;
+  therapist_name: string;
+  hours: number;
+  regular_hours: number;
+  overtime_hours: number;
+  is_overtime: boolean;
+  overtime_rate: number; // 75 MUR
+  overtime_salary: number; // overtime_hours * 75
+  is_off_day?: boolean;
+  notes?: string;
+  created_by?: string;
+  created_by_name?: string;
+  updated_by?: string;
+  updated_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TherapistMonthlySummary {
+  therapist_name: string;
+  branch: BranchName;
+  days_worked: number;
+  total_hours: number;
+  regular_hours: number;
+  overtime_hours: number;
+  overtime_rate: number;
+  overtime_salary: number;
 }
 
 export interface DailyReport {

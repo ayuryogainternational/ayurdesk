@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Therapist Working Hours & Overtime | AyurDesk - Ayuryoga International</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- CDN Dependencies -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <div class="main-wrapper">
+      <header id="app-header" class="top-header"></header>
+
+      <main class="page-container">
+        <!-- Page Title & Header Actions -->
+        <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h1 class="page-title">Therapist Daily Hours & Overtime</h1>
+            <p class="page-desc">Track therapist shifts, branch rosters, and automated overtime remuneration (MUR 75/hr above 5 hours)</p>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <!-- Mode Switcher Tabs -->
+            <div style="display: flex; background: #e2e8f0; padding: 0.25rem; border-radius: 8px;">
+              <button id="view-mode-daily" class="filter-tab active" style="padding: 0.4rem 0.85rem; font-size: 0.8125rem;">
+                <i data-lucide="calendar" style="width: 14px; height: 14px; margin-right: 0.35rem;"></i>
+                Daily Entry
+              </button>
+              <button id="view-mode-monthly" class="filter-tab" style="padding: 0.4rem 0.85rem; font-size: 0.8125rem;">
+                <i data-lucide="bar-chart-2" style="width: 14px; height: 14px; margin-right: 0.35rem;"></i>
+                Monthly Payroll Summary
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Role Access Banner: Shilpa & Gokul Collaborative Access -->
+        <div style="background: var(--forest-50); border: 1px solid var(--forest-200); border-radius: 10px; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <i data-lucide="shield-check" style="width: 18px; height: 18px; color: var(--forest-600); flex-shrink: 0;"></i>
+            <span style="font-size: 0.8125rem; font-weight: 600; color: var(--forest-900);">
+              Editable by Front Desk Staff (Shilpa & Gokul) and Administrators. Overtime rule: <strong>>5.0 hrs @ 75 MUR/hr</strong>.
+            </span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--slate-600); display: flex; align-items: center; gap: 0.5rem;">
+            <span>Current Shift: <strong id="current-user-tag">Staff Member</strong></span>
+          </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- VIEW 1: DAILY ENTRY MODE -->
+        <!-- ========================================================= -->
+        <div id="section-daily-entry">
+          <!-- Date Navigator Bar -->
+          <div class="card" style="padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button type="button" id="btn-prev-day" class="btn btn-secondary" style="padding: 0.4rem 0.7rem;" title="Previous Day">
+                  <i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i>
+                </button>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <label for="input-duty-date" style="font-size: 0.8125rem; font-weight: 700; color: var(--forest-900);">Selected Date:</label>
+                  <input type="date" id="input-duty-date" class="form-input" style="padding: 0.35rem 0.65rem; font-weight: 700; color: var(--forest-900);" />
+                </div>
+                <button type="button" id="btn-today" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.75rem; font-weight: 600;">
+                  Today
+                </button>
+                <button type="button" id="btn-next-day" class="btn btn-secondary" style="padding: 0.4rem 0.7rem;" title="Next Day">
+                  <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i>
+                </button>
+              </div>
+
+              <!-- Quick Branch Filter Tabs -->
+              <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                <button class="filter-tab branch-tab active" data-branch="all">All Branches (12)</button>
+                <button class="filter-tab branch-tab" data-branch="Grand Baie">Grand Baie (2)</button>
+                <button class="filter-tab branch-tab" data-branch="Curepipe">Curepipe (3)</button>
+                <button class="filter-tab branch-tab" data-branch="Moka">Moka (7)</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daily KPI Summary Cards -->
+          <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 1.5rem;">
+            <div class="card kpi-card">
+              <span class="kpi-title">Total Working Hours</span>
+              <div class="kpi-value" id="kpi-daily-total-hours">0.0</div>
+              <div class="kpi-sub">
+                <span class="kpi-trend trend-neutral" id="kpi-daily-active-count">0 on duty</span>
+                <span style="color: var(--slate-400); margin-left: 0.25rem;">across branches</span>
+              </div>
+            </div>
+
+            <div class="card kpi-card">
+              <span class="kpi-title">Regular Working Hours</span>
+              <div class="kpi-value" id="kpi-daily-regular-hours">0.0</div>
+              <div class="kpi-sub">
+                <span style="color: var(--slate-500);">Standard allocation (up to 5h/day)</span>
+              </div>
+            </div>
+
+            <div class="card kpi-card" style="border-left: 4px solid #f59e0b;">
+              <span class="kpi-title">Overtime Hours (> 5h)</span>
+              <div class="kpi-value" id="kpi-daily-overtime-hours" style="color: #b45309;">0.0</div>
+              <div class="kpi-sub">
+                <span class="kpi-trend trend-up" id="kpi-daily-overtime-count">0 therapists in OT</span>
+              </div>
+            </div>
+
+            <div class="card kpi-card" style="border-left: 4px solid var(--forest-600); background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);">
+              <span class="kpi-title">Total Overtime Pay</span>
+              <div class="kpi-value" id="kpi-daily-overtime-salary" style="color: var(--forest-800);">MUR 0.00</div>
+              <div class="kpi-sub">
+                <span style="color: var(--forest-700); font-weight: 700;">Rate: 75 MUR / hour</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Branch Summary Pills Bar -->
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+            <div class="badge" style="background: white; border: 1px solid var(--border-color); padding: 0.5rem 0.85rem; font-size: 0.8125rem;">
+              <span class="branch-badge-grandbaie" style="margin-right: 0.4rem;">Grand Baie</span>
+              <strong id="badge-summary-grandbaie">0h • MUR 0</strong>
+            </div>
+            <div class="badge" style="background: white; border: 1px solid var(--border-color); padding: 0.5rem 0.85rem; font-size: 0.8125rem;">
+              <span class="branch-badge-curepipe" style="margin-right: 0.4rem;">Curepipe</span>
+              <strong id="badge-summary-curepipe">0h • MUR 0</strong>
+            </div>
+            <div class="badge" style="background: white; border: 1px solid var(--border-color); padding: 0.5rem 0.85rem; font-size: 0.8125rem;">
+              <span class="branch-badge-moka" style="margin-right: 0.4rem;">Moka</span>
+              <strong id="badge-summary-moka">0h • MUR 0</strong>
+            </div>
+          </div>
+
+          <!-- Therapist Entry Cards Container (Grouped by Branch) -->
+          <div id="therapist-branches-container">
+            <!-- Dynamically rendered via js/therapist-hours.js -->
+          </div>
+
+          <!-- Floating / Fixed Save Bar -->
+          <div class="card" style="position: sticky; bottom: 1rem; z-index: 20; box-shadow: 0 4px 14px rgba(0,0,0,0.12); padding: 1rem 1.5rem; background: #ffffff; border: 2px solid var(--forest-600);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button type="button" id="btn-fill-standard" class="btn btn-secondary" style="font-size: 0.75rem;">
+                  <i data-lucide="check-square" style="width: 14px; height: 14px;"></i>
+                  <span>Fill All Active with 5.0h Standard</span>
+                </button>
+                <button type="button" id="btn-clear-hours" class="btn btn-secondary" style="font-size: 0.75rem; color: #dc2626; border-color: #fca5a5;">
+                  <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
+                  <span>Zero All</span>
+                </button>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <span id="unsaved-status-indicator" style="font-size: 0.8125rem; color: var(--slate-500); font-weight: 600;">
+                  All changes synchronized
+                </span>
+                <button type="button" id="btn-save-daily-hours" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
+                  <i data-lucide="save" style="width: 16px; height: 16px;"></i>
+                  <span>Save Daily Working Hours</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- VIEW 2: MONTHLY SUMMARY & OVERTIME PAYROLL -->
+        <!-- ========================================================= -->
+        <div id="section-monthly-summary" style="display: none;">
+          <!-- Month & Branch Filter Bar -->
+          <div class="card" style="padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <label for="monthly-month-picker" style="font-size: 0.8125rem; font-weight: 700; color: var(--forest-900);">Select Month:</label>
+                  <input type="month" id="monthly-month-picker" class="form-input" style="padding: 0.35rem 0.65rem; font-weight: 700;" />
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <label for="monthly-branch-select" style="font-size: 0.8125rem; font-weight: 700; color: var(--forest-900);">Filter Branch:</label>
+                  <select id="monthly-branch-select" class="form-select" style="padding: 0.35rem 0.65rem;">
+                    <option value="all">All 3 Branches</option>
+                    <option value="Grand Baie">Grand Baie</option>
+                    <option value="Curepipe">Curepipe</option>
+                    <option value="Moka">Moka</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Export Actions -->
+              <div style="display: flex; gap: 0.5rem;">
+                <button type="button" id="btn-export-monthly-excel" class="btn btn-secondary">
+                  <i data-lucide="file-spreadsheet" style="width: 16px; height: 16px; color: #16a34a;"></i>
+                  <span>Export Excel (.xlsx)</span>
+                </button>
+                <button type="button" id="btn-print-monthly" class="btn btn-secondary">
+                  <i data-lucide="printer" style="width: 16px; height: 16px;"></i>
+                  <span>Print Table</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Monthly Totals Cards -->
+          <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 1.5rem;">
+            <div class="card kpi-card">
+              <span class="kpi-title">Monthly Working Hours</span>
+              <div class="kpi-value" id="kpi-monthly-total-hours">0.0</div>
+              <div class="kpi-sub">
+                <span id="kpi-monthly-days-worked">0 duty days</span>
+              </div>
+            </div>
+
+            <div class="card kpi-card">
+              <span class="kpi-title">Monthly Regular Hours</span>
+              <div class="kpi-value" id="kpi-monthly-regular-hours">0.0</div>
+              <div class="kpi-sub">
+                <span style="color: var(--slate-500);">Up to 5h/day threshold</span>
+              </div>
+            </div>
+
+            <div class="card kpi-card" style="border-left: 4px solid #f59e0b;">
+              <span class="kpi-title">Monthly Overtime Hours</span>
+              <div class="kpi-value" id="kpi-monthly-overtime-hours" style="color: #b45309;">0.0</div>
+              <div class="kpi-sub">
+                <span class="kpi-trend trend-up">Above 5.0h daily limit</span>
+              </div>
+            </div>
+
+            <div class="card kpi-card" style="border-left: 4px solid var(--forest-600); background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);">
+              <span class="kpi-title">Monthly Overtime Remuneration</span>
+              <div class="kpi-value" id="kpi-monthly-overtime-salary" style="color: var(--forest-800);">MUR 0.00</div>
+              <div class="kpi-sub">
+                <span style="color: var(--forest-700); font-weight: 700;">Calculated @ 75 MUR / hour</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Monthly Overtime Table Card -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i data-lucide="table" style="width: 18px; height: 18px; color: var(--forest-600);"></i>
+                  Therapist Monthly Overtime Breakdown
+                </div>
+                <div class="card-desc">Detailed monthly hours, days worked, and overtime payroll for all 12 therapists</div>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table" id="monthly-summary-table">
+                <thead>
+                  <tr>
+                    <th>Therapist Name</th>
+                    <th>Branch</th>
+                    <th class="numeric">Days Worked</th>
+                    <th class="numeric">Off Days</th>
+                    <th class="numeric">Total Hours</th>
+                    <th class="numeric">Regular Hours (≤5h)</th>
+                    <th class="numeric">Overtime Hours (>5h)</th>
+                    <th class="numeric">Rate</th>
+                    <th class="numeric">Overtime Pay (MUR)</th>
+                  </tr>
+                </thead>
+                <tbody id="monthly-summary-tbody">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Application Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/therapist-hours.js"></script>
+</body>
+</html>

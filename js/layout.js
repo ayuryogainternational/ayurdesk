@@ -13,6 +13,7 @@ function initAppLayout(activePageKey) {
     const navItems = [
       { key: 'dashboard', href: 'index.html', label: 'Dashboard', icon: 'layout-dashboard' },
       { key: 'daily-entry', href: 'daily-entry.html', label: 'Add Daily Report', icon: 'plus-circle' },
+      { key: 'therapist-hours', href: 'therapist-hours.html', label: 'Therapist Hours', icon: 'clock' },
       { key: 'records', href: 'records.html', label: 'All Records', icon: 'table-properties' },
       { key: 'analytics', href: 'analytics.html', label: 'Analytics', icon: 'bar-chart-3' },
       // Admin Items

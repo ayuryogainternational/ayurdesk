@@ -39,7 +39,49 @@ const STORAGE_KEYS = {
   REPORTS: 'ayurdesk_reports_v3',
   AUDIT_LOGS: 'ayurdesk_audit_logs_v3',
   USERS: 'ayurdesk_users_v3',
+  THERAPIST_HOURS: 'ayurdesk_therapist_hours_v3',
 };
+
+// 3 Branches & 12 Official Ayurvedic Therapists
+const THERAPIST_BRANCHES = {
+  'Grand Baie': ['Anagha', 'Prasanth'],
+  'Curepipe': ['Abhiram', 'Adithya', 'Sandhya'],
+  'Moka': ['Shilpa', 'Abhirami', 'Megha', 'Aleena', 'Jilna', 'Vishnu', 'Randeep'],
+};
+
+const ALL_THERAPISTS = [
+  { name: 'Anagha', branch: 'Grand Baie' },
+  { name: 'Prasanth', branch: 'Grand Baie' },
+  { name: 'Abhiram', branch: 'Curepipe' },
+  { name: 'Adithya', branch: 'Curepipe' },
+  { name: 'Sandhya', branch: 'Curepipe' },
+  { name: 'Shilpa', branch: 'Moka' },
+  { name: 'Abhirami', branch: 'Moka' },
+  { name: 'Megha', branch: 'Moka' },
+  { name: 'Aleena', branch: 'Moka' },
+  { name: 'Jilna', branch: 'Moka' },
+  { name: 'Vishnu', branch: 'Moka' },
+  { name: 'Randeep', branch: 'Moka' },
+];
+
+const OVERTIME_HOURS_THRESHOLD = 5.0;
+const OVERTIME_HOURLY_RATE = 75; // 75 MUR per hour above 5h
+
+function calculateTherapistOvertime(hours) {
+  const h = Math.max(0, Number(hours) || 0);
+  const regular = Math.min(OVERTIME_HOURS_THRESHOLD, h);
+  const overtime = +(Math.max(0, h - OVERTIME_HOURS_THRESHOLD)).toFixed(2);
+  const isOvertime = h > OVERTIME_HOURS_THRESHOLD;
+  const salary = +(overtime * OVERTIME_HOURLY_RATE).toFixed(2);
+  return {
+    hours: h,
+    regular_hours: regular,
+    overtime_hours: overtime,
+    is_overtime: isOvertime,
+    overtime_rate: OVERTIME_HOURLY_RATE,
+    overtime_salary: salary,
+  };
+}
 
 const USER_PROFILES_MAP = {
   '36c696a3-bd86-46e2-8ff8-06bec48f37f4': { full_name: 'Owner / Administrator', role: 'admin' },
@@ -120,6 +162,10 @@ class DataStore {
 
     if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
+    }
+
+    if (!localStorage.getItem(STORAGE_KEYS.THERAPIST_HOURS)) {
+      localStorage.setItem(STORAGE_KEYS.THERAPIST_HOURS, JSON.stringify([]));
     }
   }
 
@@ -562,10 +608,278 @@ class DataStore {
     };
   }
 
+  // ====================================================================
+  // THERAPIST WORKING HOURS & OVERTIME MANAGEMENT
+  // Categorized across 3 Branches: Grand Baie, Curepipe, Moka
+  // Overtime rule: > 5 hours => 75 MUR per hour
+  // Editable by staff (Shilpa, Gokul) and Admin
+  // ====================================================================
+
+  getTherapistBranches() {
+    return {
+      branches: THERAPIST_BRANCHES,
+      therapists: ALL_THERAPISTS,
+      threshold: OVERTIME_HOURS_THRESHOLD,
+      rate: OVERTIME_HOURLY_RATE,
+    };
+  }
+
+  calculateTherapistOvertime(hours) {
+    return calculateTherapistOvertime(hours);
+  }
+
+  // Get all therapist hours with optional filtering (date, month, branch, therapist_name)
+  async getTherapistHours(filters = {}) {
+    const raw = localStorage.getItem(STORAGE_KEYS.THERAPIST_HOURS);
+    let records = raw ? JSON.parse(raw) : [];
+
+    if (window.supabaseClient) {
+      try {
+        const { data, error } = await window.supabaseClient
+          .from('therapist_hours')
+          .select('*')
+          .order('record_date', { ascending: false });
+
+        if (!error && Array.isArray(data) && data.length > 0) {
+          const map = new Map();
+          records.forEach((r) => map.set(`${r.record_date}_${r.therapist_name}`, r));
+          data.forEach((remote) => {
+            const key = `${remote.record_date}_${remote.therapist_name}`;
+            map.set(key, { ...(map.get(key) || {}), ...remote });
+          });
+          records = Array.from(map.values());
+          localStorage.setItem(STORAGE_KEYS.THERAPIST_HOURS, JSON.stringify(records));
+        }
+      } catch (e) {
+        // Fallback to local storage
+      }
+    }
+
+    if (filters.date) {
+      records = records.filter((r) => r.record_date === filters.date);
+    }
+    if (filters.month) {
+      records = records.filter((r) => (r.record_date || '').startsWith(filters.month));
+    }
+    if (filters.branch && filters.branch !== 'all') {
+      records = records.filter((r) => r.branch === filters.branch);
+    }
+    if (filters.therapist_name) {
+      records = records.filter(
+        (r) => r.therapist_name.toLowerCase() === filters.therapist_name.toLowerCase()
+      );
+    }
+
+    return records.sort((a, b) => b.record_date.localeCompare(a.record_date));
+  }
+
+  // Get daily records for all 12 therapists on a given date (with default empty values if not yet entered)
+  async getTherapistHoursForDate(dateStr) {
+    const records = await this.getTherapistHours({ date: dateStr });
+    const recordsMap = new Map();
+    records.forEach((r) => recordsMap.set(r.therapist_name, r));
+
+    return ALL_THERAPISTS.map((t) => {
+      const existing = recordsMap.get(t.name);
+      if (existing) return existing;
+
+      return {
+        id: `th-${t.name.toLowerCase()}-${dateStr}`,
+        record_date: dateStr,
+        branch: t.branch,
+        therapist_name: t.name,
+        hours: 0,
+        regular_hours: 0,
+        overtime_hours: 0,
+        is_overtime: false,
+        overtime_rate: OVERTIME_HOURLY_RATE,
+        overtime_salary: 0,
+        is_off_day: false,
+        notes: '',
+        created_by_name: null,
+        updated_by_name: null,
+        updated_at: null,
+      };
+    });
+  }
+
+  // Save therapist hours for a date (editable by Shilpa, Gokul, or Admin)
+  async saveTherapistHoursForDate(dateStr, hoursList) {
+    const user = window.authManager ? window.authManager.getCurrentUser() : null;
+    if (!user) throw new Error('Authentication required');
+
+    const raw = localStorage.getItem(STORAGE_KEYS.THERAPIST_HOURS);
+    let allRecords = raw ? JSON.parse(raw) : [];
+
+    const nowIso = new Date().toISOString();
+    const updatedEntries = [];
+
+    hoursList.forEach((entry) => {
+      const h = Math.max(0, Number(entry.hours) || 0);
+      const isOff = !!entry.is_off_day;
+      const effectiveHours = isOff ? 0 : h;
+      const calc = calculateTherapistOvertime(effectiveHours);
+
+      const record = {
+        id: entry.id || `th-${entry.therapist_name.toLowerCase()}-${dateStr}`,
+        record_date: dateStr,
+        branch: entry.branch,
+        therapist_name: entry.therapist_name,
+        hours: effectiveHours,
+        regular_hours: calc.regular_hours,
+        overtime_hours: calc.overtime_hours,
+        is_overtime: calc.is_overtime,
+        overtime_rate: calc.overtime_rate,
+        overtime_salary: calc.overtime_salary,
+        is_off_day: isOff,
+        notes: entry.notes || '',
+        updated_by: user.id,
+        updated_by_name: user.full_name || (user.email ? user.email.split('@')[0] : 'Staff'),
+        updated_at: nowIso,
+      };
+
+      const existingIndex = allRecords.findIndex(
+        (r) => r.record_date === dateStr && r.therapist_name === entry.therapist_name
+      );
+
+      if (existingIndex >= 0) {
+        record.created_by = allRecords[existingIndex].created_by || user.id;
+        record.created_by_name = allRecords[existingIndex].created_by_name || record.updated_by_name;
+        record.created_at = allRecords[existingIndex].created_at || nowIso;
+        allRecords[existingIndex] = record;
+      } else {
+        record.created_by = user.id;
+        record.created_by_name = record.updated_by_name;
+        record.created_at = nowIso;
+        allRecords.push(record);
+      }
+
+      updatedEntries.push(record);
+    });
+
+    localStorage.setItem(STORAGE_KEYS.THERAPIST_HOURS, JSON.stringify(allRecords));
+    broadcastDataChange('THERAPIST_HOURS_SAVED', { date: dateStr, entries: updatedEntries });
+
+    // Try Supabase background upsert
+    if (window.supabaseClient) {
+      window.supabaseClient
+        .from('therapist_hours')
+        .upsert(updatedEntries, { onConflict: 'record_date,therapist_name' })
+        .then(() => {})
+        .catch((e) => console.warn('[AyurDesk] Supabase therapist_hours notice:', e));
+    }
+
+    return updatedEntries;
+  }
+
+  // Calculate Monthly Therapist Summary for Payroll / Reports
+  calculateTherapistMonthlyReport(records, monthKey, branchFilter = 'all') {
+    const filtered = records.filter((r) => {
+      const matchMonth = (r.record_date || '').startsWith(monthKey);
+      const matchBranch = branchFilter === 'all' || r.branch === branchFilter;
+      return matchMonth && matchBranch;
+    });
+
+    const groups = new Map();
+
+    ALL_THERAPISTS.forEach((t) => {
+      if (branchFilter !== 'all' && t.branch !== branchFilter) return;
+      groups.set(t.name, {
+        therapist_name: t.name,
+        branch: t.branch,
+        days_worked: 0,
+        off_days: 0,
+        total_hours: 0,
+        regular_hours: 0,
+        overtime_hours: 0,
+        overtime_rate: OVERTIME_HOURLY_RATE,
+        overtime_salary: 0,
+        records: [],
+      });
+    });
+
+    filtered.forEach((r) => {
+      if (!groups.has(r.therapist_name)) {
+        groups.set(r.therapist_name, {
+          therapist_name: r.therapist_name,
+          branch: r.branch,
+          days_worked: 0,
+          off_days: 0,
+          total_hours: 0,
+          regular_hours: 0,
+          overtime_hours: 0,
+          overtime_rate: OVERTIME_HOURLY_RATE,
+          overtime_salary: 0,
+          records: [],
+        });
+      }
+      const g = groups.get(r.therapist_name);
+      g.records.push(r);
+
+      if (r.is_off_day) {
+        g.off_days += 1;
+      } else if (r.hours > 0) {
+        g.days_worked += 1;
+        g.total_hours = +(g.total_hours + (r.hours || 0)).toFixed(2);
+        g.regular_hours = +(g.regular_hours + (r.regular_hours || 0)).toFixed(2);
+        g.overtime_hours = +(g.overtime_hours + (r.overtime_hours || 0)).toFixed(2);
+        g.overtime_salary = +(g.overtime_salary + (r.overtime_salary || 0)).toFixed(2);
+      }
+    });
+
+    const summaries = Array.from(groups.values());
+
+    // Branch breakdown
+    const branchTotals = {
+      'Grand Baie': { hours: 0, regular: 0, overtime: 0, salary: 0, count: 0 },
+      'Curepipe': { hours: 0, regular: 0, overtime: 0, salary: 0, count: 0 },
+      'Moka': { hours: 0, regular: 0, overtime: 0, salary: 0, count: 0 },
+    };
+
+    let grandTotalHours = 0;
+    let grandRegularHours = 0;
+    let grandOvertimeHours = 0;
+    let grandOvertimeSalary = 0;
+    let grandDaysWorked = 0;
+
+    summaries.forEach((s) => {
+      grandTotalHours = +(grandTotalHours + s.total_hours).toFixed(2);
+      grandRegularHours = +(grandRegularHours + s.regular_hours).toFixed(2);
+      grandOvertimeHours = +(grandOvertimeHours + s.overtime_hours).toFixed(2);
+      grandOvertimeSalary = +(grandOvertimeSalary + s.overtime_salary).toFixed(2);
+      grandDaysWorked += s.days_worked;
+
+      if (branchTotals[s.branch]) {
+        branchTotals[s.branch].hours = +(branchTotals[s.branch].hours + s.total_hours).toFixed(2);
+        branchTotals[s.branch].regular = +(branchTotals[s.branch].regular + s.regular_hours).toFixed(2);
+        branchTotals[s.branch].overtime = +(branchTotals[s.branch].overtime + s.overtime_hours).toFixed(2);
+        branchTotals[s.branch].salary = +(branchTotals[s.branch].salary + s.overtime_salary).toFixed(2);
+        branchTotals[s.branch].count += 1;
+      }
+    });
+
+    return {
+      monthKey,
+      branchFilter,
+      therapists: summaries,
+      branchTotals,
+      grandTotals: {
+        total_hours: grandTotalHours,
+        regular_hours: grandRegularHours,
+        overtime_hours: grandOvertimeHours,
+        overtime_rate: OVERTIME_HOURLY_RATE,
+        overtime_salary: grandOvertimeSalary,
+        days_worked: grandDaysWorked,
+        therapists_count: summaries.length,
+      },
+    };
+  }
+
   // Clear all operational reports & audit logs for a fresh, clean start
   async clearAllData() {
     localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.THERAPIST_HOURS, JSON.stringify([]));
     broadcastDataChange('ALL_DATA_CLEARED', null);
 
     if (window.supabaseClient) {
@@ -578,6 +892,10 @@ class DataStore {
           .from('audit_logs')
           .delete()
           .neq('id', '00000000-0000-0000-0000-000000000000');
+        await window.supabaseClient
+          .from('therapist_hours')
+          .delete()
+          .neq('id', 'placeholder');
       } catch (err) {
         console.warn('[AyurDesk] Supabase clean notice:', err);
       }

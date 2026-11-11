@@ -50,9 +50,29 @@
             </div>
           </div>
 
+          <div class="form-grid form-grid-2col" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="report-category">Report Category</label>
+              <select id="report-category" class="form-select">
+                <option value="operations" selected>Reception Daily Operations (Inquiries, Bookings & Comms)</option>
+                <option value="therapist_overtime">Therapist Working Hours & Overtime Remuneration (>5h @ 75 MUR/hr)</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="group-branch-filter" style="display: none;">
+              <label class="form-label" for="report-branch-select">Clinic Branch</label>
+              <select id="report-branch-select" class="form-select">
+                <option value="all" selected>All Branches (Grand Baie, Curepipe, Moka)</option>
+                <option value="Grand Baie">Grand Baie Clinic (2 Therapists)</option>
+                <option value="Curepipe">Curepipe Clinic (3 Therapists)</option>
+                <option value="Moka">Moka Headquarters (7 Therapists)</option>
+              </select>
+            </div>
+          </div>
+
           <div class="form-grid form-grid-2col">
             <div class="form-group">
-              <label class="form-label" for="report-scope">Report Scope</label>
+              <label class="form-label" for="report-scope">Report Period Scope</label>
               <select id="report-scope" class="form-select">
                 <option value="range" selected>Custom Date Range</option>
                 <option value="single">Single Day</option>
@@ -117,7 +137,7 @@
         </div>
 
         <!-- Reception Team Combined Total Breakdown Card -->
-        <div class="card" style="border-color: var(--forest-200); background: #ffffff;">
+        <div id="card-reception-breakdown" class="card" style="border-color: var(--forest-200); background: #ffffff;">
           <div class="card-header" style="margin-bottom: 0.75rem;">
             <div>
               <div class="card-title">
@@ -171,6 +191,46 @@
           </div>
         </div>
 
+        <!-- Therapist Overtime Summary Breakdown Card -->
+        <div id="card-therapist-breakdown" class="card" style="display: none; border-color: #fcd34d; background: #fffdf5;">
+          <div class="card-header" style="margin-bottom: 0.75rem;">
+            <div>
+              <div class="card-title" style="color: #92400e;">
+                <i data-lucide="clock" style="width: 18px; height: 18px; color: #b45309;"></i>
+                Therapist Branch Roster & Overtime Payroll (75 MUR/hr)
+              </div>
+              <div class="card-desc">Working hours above 5 hours daily calculated at 75 MUR/hr across Grand Baie, Curepipe, and Moka</div>
+            </div>
+            <span class="badge badge-warning">12 Therapists Active</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--forest-800); text-transform: uppercase;">Grand Baie Clinic</div>
+              <div id="ot-summary-grandbaie" style="font-size: 1.125rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0h • MUR 0.00</div>
+              <div style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.25rem;">Anagha, Prasanth</div>
+            </div>
+
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--forest-800); text-transform: uppercase;">Curepipe Clinic</div>
+              <div id="ot-summary-curepipe" style="font-size: 1.125rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0h • MUR 0.00</div>
+              <div style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.25rem;">Abhiram, Adithya, Sandhya</div>
+            </div>
+
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--forest-800); text-transform: uppercase;">Moka Headquarters</div>
+              <div id="ot-summary-moka" style="font-size: 1.125rem; font-weight: 800; color: var(--forest-900); margin-top: 0.25rem;">0h • MUR 0.00</div>
+              <div style="font-size: 0.6875rem; color: var(--slate-500); margin-top: 0.25rem;">Shilpa, Abhirami, Megha, Aleena, Jilna, Vishnu, Randeep</div>
+            </div>
+
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%); border: 1px solid #fcd34d; border-radius: 10px; padding: 1rem;">
+              <div style="font-size: 0.75rem; font-weight: 800; color: #92400e; text-transform: uppercase;">Total Overtime Remuneration</div>
+              <div id="ot-summary-total-pay" style="font-size: 1.25rem; font-weight: 800; color: #78350f; margin-top: 0.25rem;">MUR 0.00</div>
+              <div id="ot-summary-total-hours" style="font-size: 0.6875rem; color: #b45309; margin-top: 0.25rem; font-weight: 600;">0.0 OT Hours across all branches</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Scoped Records Preview Table -->
         <div class="card">
           <div class="card-header">
@@ -185,7 +245,7 @@
 
           <div class="table-responsive">
             <table class="data-table">
-              <thead>
+              <thead id="export-preview-head">
                 <tr>
                   <th>Date</th>
                   <th>Receptionist</th>

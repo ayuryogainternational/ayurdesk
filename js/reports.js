@@ -1,10 +1,14 @@
 // ====================================================================
 // AyurDesk - Admin Reports Export Center Script
-// Final Report: Calculates Combined Totals Including Shilpa & Gokul
+// Final Report:
+// 1. Reception Operations: Calculates Combined Totals Including Shilpa & Gokul
+// 2. Therapist Overtime Payroll: Grand Baie, Curepipe, Moka (>5h @ 75 MUR/hr)
 // ====================================================================
 
 let allReports = [];
 let scopedRecords = [];
+let allTherapistHours = [];
+let scopedTherapistRecords = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!window.authManager.requireAuth(true)) return;
@@ -15,9 +19,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('report-single-date').value = today;
   document.getElementById('report-end-date').value = today;
 
-  // Setup Scope Change
+  // Setup Category & Scope Changes
+  const categorySelect = document.getElementById('report-category');
+  const branchSelect = document.getElementById('report-branch-select');
+  const branchGroup = document.getElementById('group-branch-filter');
+
+  if (categorySelect) {
+    categorySelect.addEventListener('change', () => {
+      const isTherapist = categorySelect.value === 'therapist_overtime';
+      if (branchGroup) branchGroup.style.display = isTherapist ? 'block' : 'none';
+      document.getElementById('card-reception-breakdown').style.display = isTherapist ? 'none' : 'block';
+      document.getElementById('card-therapist-breakdown').style.display = isTherapist ? 'block' : 'none';
+      updateScopedRecords();
+    });
+  }
+
+  if (branchSelect) {
+    branchSelect.addEventListener('change', updateScopedRecords);
+  }
+
   const scopeSelect = document.getElementById('report-scope');
-  scopeSelect.addEventListener('change', updateScopeInputs);
+  if (scopeSelect) {
+    scopeSelect.addEventListener('change', updateScopeInputs);
+  }
 
   document.getElementById('report-single-date').addEventListener('change', updateScopedRecords);
   document.getElementById('report-start-date').addEventListener('change', updateScopedRecords);
@@ -35,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       syncBtn.innerHTML = '<i data-lucide="refresh-cw" class="spin"></i><span>Syncing...</span>';
       if (window.lucide) window.lucide.createIcons();
       await refreshReportsData(true);
-      window.showToast('Database Synchronized', 'Loaded latest operational entries from reception desk.', 'success');
+      window.showToast('Database Synchronized', 'Loaded latest operational and therapist entries.', 'success');
       syncBtn.disabled = false;
       syncBtn.innerHTML = '<i data-lucide="refresh-cw"></i><span>Sync Database</span>';
       if (window.lucide) window.lucide.createIcons();
@@ -46,19 +70,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('ayurdesk:data-updated', async () => {
     await refreshReportsData(false);
   });
-  window.addEventListener('storage', async (e) => {
-    if (e.key === 'ayurdesk_reports_v2') {
-      await refreshReportsData(false);
-    }
-  });
-  if (typeof BroadcastChannel !== 'undefined') {
-    try {
-      const channel = new BroadcastChannel('ayurdesk_sync');
-      channel.onmessage = async () => {
-        await refreshReportsData(false);
-      };
-    } catch (e) {}
-  }
 
   await refreshReportsData(false);
   updateScopeInputs();
@@ -66,6 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function refreshReportsData(forceRemote = false) {
   allReports = await window.dataStore.getReports();
+  allTherapistHours = await window.dataStore.getTherapistHours();
 
   // If reports have dates newer than today, extend end date default so new entries are shown
   if (allReports && allReports.length > 0) {
@@ -114,7 +126,6 @@ function getStaffAttribution(r) {
   } else if (r.created_by_name) {
     return r.created_by_name;
   }
-  // Default for historical reception entries:
   return 'Shilpa & Gokul (Reception)';
 }
 
@@ -180,12 +191,25 @@ function calculateStaffBreakdown(records) {
   };
 }
 
-function updateScopedRecords() {
+async function updateScopedRecords() {
+  const category = document.getElementById('report-category')?.value || 'operations';
   const scope = document.getElementById('report-scope').value;
   const singleDate = document.getElementById('report-single-date').value;
   const startDate = document.getElementById('report-start-date').value;
   const endDate = document.getElementById('report-end-date').value;
+  const branchFilter = document.getElementById('report-branch-select')?.value || 'all';
 
+  if (category === 'therapist_overtime') {
+    await renderTherapistReportPreview(scope, singleDate, startDate, endDate, branchFilter);
+  } else {
+    renderOperationsReportPreview(scope, singleDate, startDate, endDate);
+  }
+}
+
+// --------------------------------------------------------------------
+// 1. Operations Report Preview
+// --------------------------------------------------------------------
+function renderOperationsReportPreview(scope, singleDate, startDate, endDate) {
   if (scope === 'single') {
     scopedRecords = allReports.filter((r) => r.report_date === singleDate);
   } else if (scope === 'weekly') {
@@ -201,7 +225,6 @@ function updateScopedRecords() {
   } else if (scope === 'all') {
     scopedRecords = [...allReports].sort((a, b) => a.report_date.localeCompare(b.report_date));
   } else {
-    // range
     scopedRecords = allReports
       .filter((r) => {
         if (startDate && r.report_date < startDate) return false;
@@ -238,12 +261,30 @@ function updateScopedRecords() {
   document.getElementById('rep-combined-bookings').textContent = breakdown.combined.bookings.toLocaleString();
   document.getElementById('rep-combined-comms').textContent = `${breakdown.combined.totalComms.toLocaleString()} (${breakdown.combined.whatsapp} WA / ${breakdown.combined.normalCalls} Calls)`;
 
+  // Update Table Header
+  const thead = document.getElementById('export-preview-head');
+  if (thead) {
+    thead.innerHTML = `
+      <tr>
+        <th>Date</th>
+        <th>Receptionist</th>
+        <th class="numeric">Inquiries</th>
+        <th class="numeric">Responses</th>
+        <th class="numeric">Turnaround</th>
+        <th class="numeric">Bookings</th>
+        <th class="numeric">Confirmations</th>
+        <th class="numeric">WhatsApp</th>
+        <th class="numeric">Calls</th>
+      </tr>
+    `;
+  }
+
   // Update Preview Table Body
   const tbody = document.getElementById('export-preview-body');
   const tfoot = document.getElementById('export-preview-foot');
 
   if (scopedRecords.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2rem; color: var(--slate-400);">No records match the selected scope.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2rem; color: var(--slate-400);">No operational records match the selected scope.</td></tr>`;
     if (tfoot) tfoot.innerHTML = '';
     return;
   }
@@ -272,7 +313,6 @@ function updateScopedRecords() {
     })
     .join('');
 
-  // Update Preview Table Footer with Combined Total (Shilpa & Gokul)
   if (tfoot) {
     tfoot.innerHTML = `
       <tr style="background-color: var(--warm-100); border-top: 2px solid var(--forest-900);">
@@ -291,10 +331,178 @@ function updateScopedRecords() {
   }
 }
 
+// --------------------------------------------------------------------
+// 2. Therapist Overtime Report Preview
+// --------------------------------------------------------------------
+async function renderTherapistReportPreview(scope, singleDate, startDate, endDate, branchFilter) {
+  let filtered = [...allTherapistHours];
+
+  if (scope === 'single') {
+    filtered = filtered.filter((r) => r.record_date === singleDate);
+  } else if (scope === 'weekly') {
+    const dates = Array.from(new Set(allTherapistHours.map((r) => r.record_date)))
+      .sort()
+      .slice(-7);
+    filtered = filtered.filter((r) => dates.includes(r.record_date));
+  } else if (scope === 'monthly') {
+    const dates = Array.from(new Set(allTherapistHours.map((r) => r.record_date)))
+      .sort()
+      .slice(-30);
+    filtered = filtered.filter((r) => dates.includes(r.record_date));
+  } else if (scope === 'range') {
+    filtered = filtered.filter((r) => {
+      if (startDate && r.record_date < startDate) return false;
+      if (endDate && r.record_date > endDate) return false;
+      return true;
+    });
+  }
+
+  if (branchFilter !== 'all') {
+    filtered = filtered.filter((r) => r.branch === branchFilter);
+  }
+
+  scopedTherapistRecords = filtered.sort((a, b) => b.record_date.localeCompare(a.record_date));
+
+  // Calculate Branch Breakdown
+  const branches = {
+    'Grand Baie': { hours: 0, overtime: 0, salary: 0 },
+    'Curepipe': { hours: 0, overtime: 0, salary: 0 },
+    'Moka': { hours: 0, overtime: 0, salary: 0 },
+  };
+
+  let grandHours = 0;
+  let grandRegular = 0;
+  let grandOvertime = 0;
+  let grandSalary = 0;
+
+  scopedTherapistRecords.forEach((r) => {
+    const h = Number(r.hours) || 0;
+    const reg = Number(r.regular_hours) || 0;
+    const ot = Number(r.overtime_hours) || 0;
+    const sal = Number(r.overtime_salary) || 0;
+
+    grandHours += h;
+    grandRegular += reg;
+    grandOvertime += ot;
+    grandSalary += sal;
+
+    if (branches[r.branch]) {
+      branches[r.branch].hours += h;
+      branches[r.branch].overtime += ot;
+      branches[r.branch].salary += sal;
+    }
+  });
+
+  document.getElementById('ot-summary-grandbaie').textContent =
+    `${branches['Grand Baie'].hours.toFixed(1)}h • MUR ${branches['Grand Baie'].salary.toFixed(2)}`;
+  document.getElementById('ot-summary-curepipe').textContent =
+    `${branches['Curepipe'].hours.toFixed(1)}h • MUR ${branches['Curepipe'].salary.toFixed(2)}`;
+  document.getElementById('ot-summary-moka').textContent =
+    `${branches['Moka'].hours.toFixed(1)}h • MUR ${branches['Moka'].salary.toFixed(2)}`;
+  document.getElementById('ot-summary-total-pay').textContent = `MUR ${grandSalary.toFixed(2)}`;
+  document.getElementById('ot-summary-total-hours').textContent =
+    `${grandOvertime.toFixed(1)} OT Hours (>5h) across active clinics`;
+
+  document.getElementById('export-summary-text').textContent =
+    `Therapist Overtime Roster (${branchFilter.toUpperCase()})`;
+  document.getElementById('export-metrics-text').textContent =
+    `Shifts Logged: ${scopedTherapistRecords.length} | Total Hours: ${grandHours.toFixed(1)} | Overtime Hours: ${grandOvertime.toFixed(1)} | Overtime Pay: MUR ${grandSalary.toFixed(2)}`;
+
+  // Update Table Header
+  const thead = document.getElementById('export-preview-head');
+  if (thead) {
+    thead.innerHTML = `
+      <tr>
+        <th>Date</th>
+        <th>Therapist Name</th>
+        <th>Branch</th>
+        <th class="numeric">Working Hours</th>
+        <th class="numeric">Regular (≤ 5h)</th>
+        <th class="numeric">Overtime (> 5h)</th>
+        <th class="numeric">Rate</th>
+        <th class="numeric">Overtime Pay (MUR)</th>
+        <th>Logged By</th>
+      </tr>
+    `;
+  }
+
+  const tbody = document.getElementById('export-preview-body');
+  const tfoot = document.getElementById('export-preview-foot');
+
+  if (scopedTherapistRecords.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2rem; color: var(--slate-400);">No therapist hours logged for the selected scope. Use "Therapist Hours" in sidebar to enter shifts.</td></tr>`;
+    if (tfoot) tfoot.innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = scopedTherapistRecords
+    .map((r) => {
+      const isOt = r.overtime_hours > 0;
+      return `
+        <tr>
+          <td style="font-weight: 600; color: var(--forest-900);">${window.formatDateDisplay(r.record_date)}</td>
+          <td style="font-weight: 700; color: var(--forest-900);">${r.therapist_name}</td>
+          <td><span class="badge">${r.branch}</span></td>
+          <td class="numeric" style="font-weight: 700;">${Number(r.hours).toFixed(1)}</td>
+          <td class="numeric">${Number(r.regular_hours).toFixed(1)}</td>
+          <td class="numeric" style="font-weight: 700; color: ${isOt ? '#b45309' : 'inherit'};">
+            ${isOt ? `+${Number(r.overtime_hours).toFixed(1)}` : '0.0'}
+          </td>
+          <td class="numeric" style="color: var(--slate-500);">MUR 75</td>
+          <td class="numeric" style="font-weight: 800; color: ${isOt ? 'var(--forest-900)' : 'var(--slate-400)'};">
+            MUR ${Number(r.overtime_salary).toFixed(2)}
+          </td>
+          <td style="font-size: 0.75rem; color: var(--slate-500);">${r.updated_by_name || r.created_by_name || 'Staff'}</td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  if (tfoot) {
+    tfoot.innerHTML = `
+      <tr style="background-color: #fef3c7; border-top: 2px solid #b45309;">
+        <td colspan="3" style="font-weight: 800; color: #92400e; padding: 0.75rem 0.875rem;">
+          COMBINED OVERTIME TOTAL (> 5h @ 75 MUR/hr)
+        </td>
+        <td class="numeric" style="font-weight: 800; color: #92400e;">${grandHours.toFixed(1)}</td>
+        <td class="numeric" style="font-weight: 800; color: #92400e;">${grandRegular.toFixed(1)}</td>
+        <td class="numeric" style="font-weight: 800; color: #b45309;">+${grandOvertime.toFixed(1)}</td>
+        <td class="numeric" style="font-weight: 800; color: #92400e;">MUR 75</td>
+        <td class="numeric" style="font-weight: 800; color: #78350f; font-size: 1rem;">MUR ${grandSalary.toFixed(2)}</td>
+        <td>-</td>
+      </tr>
+    `;
+  }
+}
+
 // ==========================================
-// Excel Export via ExcelJS (Calculates Combined Shilpa & Gokul)
+// Export Router: Excel
 // ==========================================
 async function handleExportExcel() {
+  const category = document.getElementById('report-category')?.value || 'operations';
+  if (category === 'therapist_overtime') {
+    await exportTherapistExcel();
+  } else {
+    await exportOperationsExcel();
+  }
+}
+
+// ==========================================
+// Export Router: PDF
+// ==========================================
+function handleExportPdf() {
+  const category = document.getElementById('report-category')?.value || 'operations';
+  if (category === 'therapist_overtime') {
+    exportTherapistPdf();
+  } else {
+    exportOperationsPdf();
+  }
+}
+
+// --------------------------------------------------------------------
+// Export Operations to Excel
+// --------------------------------------------------------------------
+async function exportOperationsExcel() {
   if (scopedRecords.length === 0) {
     window.showToast('Export Notice', 'No records match current scope to export.', 'warning');
     return;
@@ -315,7 +523,6 @@ async function handleExportExcel() {
     });
 
     const breakdown = calculateStaffBreakdown(scopedRecords);
-    const user = window.authManager.getCurrentUser();
 
     // 1. Header Banner
     worksheet.mergeCells('A1:I1');
@@ -328,143 +535,82 @@ async function handleExportExcel() {
     worksheet.mergeCells('A2:I2');
     const subtitleCell = worksheet.getCell('A2');
     subtitleCell.value = `AyurDesk Final Operations Report – Reception Combined (Shilpa & Gokul)`;
-    subtitleCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF23675B' } };
+    subtitleCell.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FF23675B' } };
     subtitleCell.alignment = { vertical: 'middle', horizontal: 'left' };
-    worksheet.getRow(2).height = 22;
+    worksheet.getRow(2).height = 20;
 
-    // 2. Metadata
-    worksheet.getCell('A3').value = 'Report Period:';
-    worksheet.getCell('A3').font = { bold: true, size: 9, color: { argb: 'FF555555' } };
-    worksheet.getCell('B3').value = document.getElementById('export-summary-text').textContent;
+    worksheet.addRow([]);
 
-    worksheet.getCell('E3').value = 'Generated At:';
-    worksheet.getCell('E3').font = { bold: true, size: 9, color: { argb: 'FF555555' } };
-    worksheet.getCell('F3').value = window.getReportGenerationTimestamp();
-
-    worksheet.getCell('A4').value = 'Authorized Officer:';
-    worksheet.getCell('A4').font = { bold: true, size: 9, color: { argb: 'FF555555' } };
-    worksheet.getCell('B4').value = user ? user.full_name : 'Administrator';
-
-    worksheet.getCell('E4').value = 'Reception Team:';
-    worksheet.getCell('E4').font = { bold: true, size: 9, color: { argb: 'FF555555' } };
-    worksheet.getCell('F4').value = 'Shilpa & Gokul (Combined Reception Desk)';
-
-    // Empty separator
-    worksheet.getRow(5).height = 8;
-
-    // 3. Reception Breakdown Box in Excel (Rows 6-9)
-    worksheet.mergeCells('A6:D6');
-    const boxTitle = worksheet.getCell('A6');
-    boxTitle.value = 'RECEPTION PERSONNEL SUMMARY (SHILPA & GOKUL)';
-    boxTitle.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-    boxTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF23675B' } };
-
-    const subHeader = worksheet.getRow(7);
-    subHeader.values = ['Personnel', 'Active Days', 'Inquiries Attributed', 'Confirmed Bookings'];
-    subHeader.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF103B37' } };
-
-    const rowShilpa = worksheet.getRow(8);
-    rowShilpa.values = ['Shilpa (Reception)', breakdown.shilpa.days, breakdown.shilpa.inquiries, breakdown.shilpa.bookings];
-    rowShilpa.font = { name: 'Arial', size: 9 };
-
-    const rowGokul = worksheet.getRow(9);
-    rowGokul.values = ['Gokul (Reception)', breakdown.gokul.days, breakdown.gokul.inquiries, breakdown.gokul.bookings];
-    rowGokul.font = { name: 'Arial', size: 9 };
-
-    const rowCombSummary = worksheet.getRow(10);
-    rowCombSummary.values = ['COMBINED RECEPTION TOTAL (Both Shilpa & Gokul)', scopedRecords.length, breakdown.combined.inquiries, breakdown.combined.bookings];
-    rowCombSummary.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF103B37' } };
-    rowCombSummary.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F7EF' } };
-
-    // Empty separator
-    worksheet.getRow(11).height = 12;
-
-    // 4. Main Data Table Header Row (Row 12)
-    const headers = [
+    // Header Row
+    const headerRow = worksheet.addRow([
       'Report Date',
-      'Receptionist / Shift',
-      'Inquiries',
-      'Responses',
+      'Receptionist On Duty',
+      'Inquiries Received',
+      'Responses Provided',
       'Turnaround %',
       'Confirmed Bookings',
-      'Confirmations',
-      'WhatsApp Volume',
-      'Normal Calls',
-    ];
-    const headerRow = worksheet.getRow(12);
-    headerRow.values = headers;
-    headerRow.height = 24;
+      'Intake Confirmations',
+      'WhatsApp Inquiries',
+      'Phone Call Inquiries',
+    ]);
+    headerRow.height = 26;
     headerRow.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF103B37' } };
       cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF103B37' } };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
 
-    // 5. Data Rows
-    let currentRowIdx = 13;
-    let sumInq = 0, sumResp = 0, sumBook = 0, sumConf = 0, sumWa = 0, sumCall = 0;
-
     scopedRecords.forEach((r) => {
-      const row = worksheet.getRow(currentRowIdx);
       const turnaround =
         r.total_enquiries && r.total_responses
-          ? Math.round((r.total_responses / r.total_enquiries) * 100) + '%'
-          : '-';
+          ? +(r.total_responses / r.total_enquiries).toFixed(2)
+          : null;
       const staff = getStaffAttribution(r);
 
-      row.values = [
+      const row = worksheet.addRow([
         r.report_date,
         staff,
-        r.total_enquiries ?? '-',
-        r.total_responses ?? '-',
+        r.total_enquiries,
+        r.total_responses,
         turnaround,
-        r.total_bookings ?? '-',
-        r.total_confirmations ?? '-',
-        r.whatsapp_calls_messages ?? '-',
-        r.normal_calls ?? '-',
-      ];
-
-      if (r.total_enquiries) sumInq += r.total_enquiries;
-      if (r.total_responses) sumResp += r.total_responses;
-      if (r.total_bookings) sumBook += r.total_bookings;
-      if (r.total_confirmations) sumConf += r.total_confirmations;
-      if (r.whatsapp_calls_messages) sumWa += r.whatsapp_calls_messages;
-      if (r.normal_calls) sumCall += r.normal_calls;
-
-      row.height = 18;
-      row.eachCell((cell, colNumber) => {
-        cell.alignment = { vertical: 'middle', horizontal: colNumber <= 2 ? 'left' : 'right' };
-        cell.border = { bottom: { style: 'thin', color: { argb: 'FFE5E5DC' } } };
-      });
-      currentRowIdx++;
+        r.total_bookings,
+        r.total_confirmations,
+        r.whatsapp_calls_messages,
+        r.normal_calls,
+      ]);
+      row.height = 20;
+      row.getCell(5).numFmt = '0.0%';
     });
 
-    // 6. Final COMBINED TOTAL Row (Includes both Shilpa and Gokul)
-    const totalRow = worksheet.getRow(currentRowIdx);
-    const overallTurnaround = sumInq > 0 ? Math.round((sumResp / sumInq) * 100) + '%' : '-';
-    totalRow.values = ['COMBINED TOTAL (Shilpa & Gokul)', 'Both Included', sumInq, sumResp, overallTurnaround, sumBook, sumConf, sumWa, sumCall];
+    // Combined Total Row
+    worksheet.addRow([]);
+    const totalRow = worksheet.addRow([
+      'COMBINED TOTAL (Shilpa & Gokul)',
+      'Both Reception Shifts',
+      breakdown.combined.inquiries,
+      breakdown.combined.responses,
+      breakdown.combined.turnaround,
+      breakdown.combined.bookings,
+      breakdown.combined.confirmations,
+      breakdown.combined.whatsapp,
+      breakdown.combined.normalCalls,
+    ]);
     totalRow.height = 24;
-    totalRow.eachCell((cell, colNumber) => {
+    totalRow.eachCell((cell) => {
       cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF103B37' } };
-      cell.alignment = { vertical: 'middle', horizontal: colNumber <= 2 ? 'left' : 'right' };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } }; // Light teal/blue tint
-      cell.border = {
-        top: { style: 'medium', color: { argb: 'FF103B37' } },
-        bottom: { style: 'double', color: { argb: 'FF103B37' } },
-      };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE6F4EA' } };
     });
 
-    // Column widths
     worksheet.columns = [
-      { width: 15 },
+      { width: 14 },
       { width: 26 },
-      { width: 14 },
-      { width: 14 },
-      { width: 16 },
-      { width: 20 },
-      { width: 16 },
+      { width: 18 },
       { width: 18 },
       { width: 16 },
+      { width: 18 },
+      { width: 20 },
+      { width: 18 },
+      { width: 18 },
     ];
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -478,7 +624,7 @@ async function handleExportExcel() {
     a.click();
     window.URL.revokeObjectURL(url);
 
-    window.showToast('Excel Export Ready', 'Downloaded spreadsheet with combined Shilpa & Gokul totals.', 'success');
+    window.showToast('Excel Downloaded', 'Exported combined operations report.', 'success');
   } catch (err) {
     window.showToast('Export Error', err.message || 'Error generating Excel', 'error');
   } finally {
@@ -488,137 +634,278 @@ async function handleExportExcel() {
   }
 }
 
-// ==========================================
-// PDF Export via jsPDF & autoTable (Combined Shilpa & Gokul)
-// ==========================================
-function handleExportPdf() {
+// --------------------------------------------------------------------
+// Export Therapist Overtime to Excel
+// --------------------------------------------------------------------
+async function exportTherapistExcel() {
+  if (scopedTherapistRecords.length === 0) {
+    window.showToast('Export Notice', 'No therapist records match current scope to export.', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btn-export-excel');
+  btn.disabled = true;
+  btn.innerHTML = 'Generating Excel...';
+
+  try {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'AyurDesk - Ayuryoga International';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Therapist Overtime Payroll', {
+      views: [{ showGridLines: true }],
+    });
+
+    sheet.mergeCells('A1:I1');
+    sheet.getCell('A1').value = 'AYURYOGA INTERNATIONAL - THERAPIST WORKING HOURS & OVERTIME PAYROLL';
+    sheet.getCell('A1').font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF103B37' } };
+    sheet.getCell('A1').alignment = { vertical: 'middle', horizontal: 'center' };
+    sheet.getRow(1).height = 34;
+
+    sheet.mergeCells('A2:I2');
+    sheet.getCell('A2').value =
+      'Overtime Rule: > 5.0 hours daily @ 75 MUR/hour | Branches: Grand Baie, Curepipe, Moka';
+    sheet.getCell('A2').font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF475569' } };
+    sheet.getCell('A2').alignment = { vertical: 'middle', horizontal: 'center' };
+
+    sheet.addRow([]);
+
+    const headerRow = sheet.addRow([
+      'Date',
+      'Therapist Name',
+      'Branch',
+      'Working Hours',
+      'Regular Hours (≤ 5h)',
+      'Overtime Hours (> 5h)',
+      'Overtime Rate (MUR)',
+      'Overtime Pay (MUR)',
+      'Recorded By',
+    ]);
+    headerRow.height = 26;
+    headerRow.eachCell((cell) => {
+      cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF23675B' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    let grandHours = 0, grandReg = 0, grandOt = 0, grandSal = 0;
+
+    scopedTherapistRecords.forEach((r) => {
+      const h = Number(r.hours) || 0;
+      const reg = Number(r.regular_hours) || 0;
+      const ot = Number(r.overtime_hours) || 0;
+      const sal = Number(r.overtime_salary) || 0;
+
+      grandHours += h;
+      grandReg += reg;
+      grandOt += ot;
+      grandSal += sal;
+
+      const row = sheet.addRow([
+        r.record_date,
+        r.therapist_name,
+        r.branch,
+        h,
+        reg,
+        ot,
+        75,
+        sal,
+        r.updated_by_name || r.created_by_name || 'Staff',
+      ]);
+      row.height = 20;
+      row.getCell(4).numFmt = '#,##0.0';
+      row.getCell(5).numFmt = '#,##0.0';
+      row.getCell(6).numFmt = '#,##0.0';
+      row.getCell(7).numFmt = '"MUR " #,##0.00';
+      row.getCell(8).numFmt = '"MUR " #,##0.00';
+    });
+
+    // Grand Total Row
+    sheet.addRow([]);
+    const grandRow = sheet.addRow([
+      'GRAND TOTAL',
+      'ALL 12 THERAPISTS',
+      '3 BRANCHES',
+      grandHours,
+      grandReg,
+      grandOt,
+      75,
+      grandSal,
+      'System Validated',
+    ]);
+    grandRow.height = 26;
+    grandRow.eachCell((cell) => {
+      cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF103B37' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+    });
+    grandRow.getCell(4).numFmt = '#,##0.0';
+    grandRow.getCell(5).numFmt = '#,##0.0';
+    grandRow.getCell(6).numFmt = '#,##0.0';
+    grandRow.getCell(7).numFmt = '"MUR " #,##0.00';
+    grandRow.getCell(8).numFmt = '"MUR " #,##0.00';
+
+    sheet.columns = [
+      { width: 14 },
+      { width: 20 },
+      { width: 16 },
+      { width: 16 },
+      { width: 18 },
+      { width: 20 },
+      { width: 20 },
+      { width: 24 },
+      { width: 18 },
+    ];
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Ayuryoga_Therapist_Overtime_Payroll_${window.getTodayMauritiusDate()}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    window.showToast('Excel Downloaded', 'Exported therapist overtime payroll spreadsheet.', 'success');
+  } catch (err) {
+    window.showToast('Export Error', err.message || 'Error generating Excel', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="file-spreadsheet"></i><span>Download Excel (.xlsx)</span>';
+    if (window.lucide) window.lucide.createIcons();
+  }
+}
+
+// --------------------------------------------------------------------
+// PDF Exports
+// --------------------------------------------------------------------
+function exportOperationsPdf() {
   if (scopedRecords.length === 0) {
     window.showToast('Export Notice', 'No records match current scope to export.', 'warning');
     return;
   }
 
-  const btn = document.getElementById('btn-export-pdf');
-  btn.disabled = true;
-  btn.innerHTML = 'Generating PDF...';
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
 
-  try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4',
-    });
+  doc.setFillColor(16, 59, 55);
+  doc.rect(0, 0, pageWidth, 5, 'F');
 
-    const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(16, 59, 55);
+  doc.text('AYURYOGA INTERNATIONAL', 14, 15);
 
-    // Top brand bar
-    doc.setFillColor(16, 59, 55);
-    doc.rect(0, 0, pageWidth, 5, 'F');
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Official Operations Report - Generated on ${window.getTodayMauritiusDate()}`, 14, 21);
 
-    // Header
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(16, 59, 55);
-    doc.text('AYURYOGA INTERNATIONAL', 14, 16);
+  const breakdown = calculateStaffBreakdown(scopedRecords);
 
-    doc.setFontSize(11);
-    doc.setTextColor(35, 103, 91);
-    doc.text(`AyurDesk Operations Report – Reception Combined (Shilpa & Gokul)`, 14, 22);
+  const tableData = scopedRecords.map((r) => [
+    r.report_date,
+    getStaffAttribution(r),
+    r.total_enquiries ?? '-',
+    r.total_responses ?? '-',
+    r.total_bookings ?? '-',
+    r.total_confirmations ?? '-',
+    r.whatsapp_calls_messages ?? '-',
+    r.normal_calls ?? '-',
+  ]);
 
-    doc.setDrawColor(229, 229, 220);
-    doc.setLineWidth(0.5);
-    doc.line(14, 25, pageWidth - 14, 25);
+  tableData.push([
+    'COMBINED TOTAL',
+    'Shilpa & Gokul',
+    String(breakdown.combined.inquiries),
+    String(breakdown.combined.responses),
+    String(breakdown.combined.bookings),
+    String(breakdown.combined.confirmations),
+    String(breakdown.combined.whatsapp),
+    String(breakdown.combined.normalCalls),
+  ]);
 
-    // Metadata
-    const user = window.authManager.getCurrentUser();
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
-    doc.text(`Generated At: ${window.getReportGenerationTimestamp()}`, 14, 30);
-    doc.text(`Authorized Officer: ${user ? user.full_name : 'Administrator'}`, 120, 30);
-    doc.text(`Reception Team: Shilpa & Gokul (Both Included in Totals)`, 200, 30);
+  doc.autoTable({
+    startY: 26,
+    head: [['Date', 'Staff', 'Inquiries', 'Responses', 'Bookings', 'Confirmations', 'WhatsApp', 'Calls']],
+    body: tableData,
+    theme: 'striped',
+    headStyles: { fillColor: [16, 59, 55], textColor: 255 },
+  });
 
-    // Table Data
-    const headers = [
-      ['Date', 'Receptionist', 'Inquiries', 'Responses', 'Turnaround', 'Bookings', 'Confirmations', 'WhatsApp', 'Normal Calls'],
-    ];
+  doc.save(`AyurDesk_Operations_Report_${window.getTodayMauritiusDate()}.pdf`);
+  window.showToast('PDF Export Ready', 'Downloaded official operations report PDF.', 'success');
+}
 
-    let sumInq = 0, sumResp = 0, sumBook = 0, sumConf = 0, sumWa = 0, sumCall = 0;
-
-    const rows = scopedRecords.map((r) => {
-      const turnaround =
-        r.total_enquiries && r.total_responses
-          ? Math.round((r.total_responses / r.total_enquiries) * 100) + '%'
-          : '-';
-      const staff = getStaffAttribution(r);
-
-      if (r.total_enquiries) sumInq += r.total_enquiries;
-      if (r.total_responses) sumResp += r.total_responses;
-      if (r.total_bookings) sumBook += r.total_bookings;
-      if (r.total_confirmations) sumConf += r.total_confirmations;
-      if (r.whatsapp_calls_messages) sumWa += r.whatsapp_calls_messages;
-      if (r.normal_calls) sumCall += r.normal_calls;
-
-      return [
-        r.report_date,
-        staff,
-        r.total_enquiries ?? '-',
-        r.total_responses ?? '-',
-        turnaround,
-        r.total_bookings ?? '-',
-        r.total_confirmations ?? '-',
-        r.whatsapp_calls_messages ?? '-',
-        r.normal_calls ?? '-',
-      ];
-    });
-
-    // Add Combined Totals row (Both Shilpa & Gokul)
-    const overallTurnaround = sumInq > 0 ? Math.round((sumResp / sumInq) * 100) + '%' : '-';
-    rows.push(['COMBINED TOTAL (Shilpa & Gokul)', 'Both Included', sumInq, sumResp, overallTurnaround, sumBook, sumConf, sumWa, sumCall]);
-
-    doc.autoTable({
-      startY: 34,
-      head: headers,
-      body: rows,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [16, 59, 55],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 9,
-      },
-      styles: {
-        fontSize: 8,
-        cellPadding: 2.8,
-        textColor: [40, 40, 40],
-      },
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 26 },
-        1: { cellWidth: 44 },
-        2: { halign: 'right' },
-        3: { halign: 'right' },
-        4: { halign: 'center' },
-        5: { halign: 'right', fontStyle: 'bold' },
-        6: { halign: 'right' },
-        7: { halign: 'right' },
-        8: { halign: 'right' },
-      },
-      didParseCell: (data) => {
-        if (data.row.index === rows.length - 1) {
-          data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fillColor = [224, 242, 254]; // soft blue-teal
-          data.cell.styles.textColor = [16, 59, 55];
-        }
-      },
-    });
-
-    doc.save(`AyurDesk_Operations_Combined_${window.getTodayMauritiusDate()}.pdf`);
-    window.showToast('PDF Export Ready', 'Downloaded official PDF report with combined Shilpa & Gokul totals.', 'success');
-  } catch (err) {
-    window.showToast('Export Error', err.message || 'Error generating PDF', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i data-lucide="download"></i><span>Download PDF (.pdf)</span>';
-    if (window.lucide) window.lucide.createIcons();
+function exportTherapistPdf() {
+  if (scopedTherapistRecords.length === 0) {
+    window.showToast('Export Notice', 'No records match current scope to export.', 'warning');
+    return;
   }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  doc.setFillColor(16, 59, 55);
+  doc.rect(0, 0, pageWidth, 5, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(16, 59, 55);
+  doc.text('AYURYOGA INTERNATIONAL', 14, 15);
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Therapist Working Hours & Overtime Remuneration (>5h @ 75 MUR/hr)', 14, 21);
+
+  let grandHours = 0, grandOt = 0, grandSal = 0;
+
+  const tableData = scopedTherapistRecords.map((r) => {
+    const h = Number(r.hours) || 0;
+    const ot = Number(r.overtime_hours) || 0;
+    const sal = Number(r.overtime_salary) || 0;
+    grandHours += h;
+    grandOt += ot;
+    grandSal += sal;
+
+    return [
+      r.record_date,
+      r.therapist_name,
+      r.branch,
+      h.toFixed(1),
+      Number(r.regular_hours || 0).toFixed(1),
+      ot > 0 ? `+${ot.toFixed(1)}` : '0.0',
+      'MUR 75',
+      `MUR ${sal.toFixed(2)}`,
+      r.updated_by_name || 'Staff',
+    ];
+  });
+
+  tableData.push([
+    'COMBINED TOTAL',
+    '12 Therapists',
+    '3 Branches',
+    grandHours.toFixed(1),
+    '-',
+    `+${grandOt.toFixed(1)}`,
+    'MUR 75',
+    `MUR ${grandSal.toFixed(2)}`,
+    'Verified',
+  ]);
+
+  doc.autoTable({
+    startY: 26,
+    head: [['Date', 'Therapist', 'Branch', 'Hours', 'Regular (≤5h)', 'Overtime (>5h)', 'Rate', 'Overtime Pay', 'Recorded By']],
+    body: tableData,
+    theme: 'grid',
+    headStyles: { fillColor: [16, 59, 55], textColor: 255 },
+  });
+
+  doc.save(`Ayuryoga_Therapist_Overtime_Payroll_${window.getTodayMauritiusDate()}.pdf`);
+  window.showToast('PDF Export Ready', 'Downloaded therapist overtime payroll PDF.', 'success');
 }
