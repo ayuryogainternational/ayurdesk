@@ -3,53 +3,10 @@
 // Organization: Ayuryoga International
 // ====================================================================
 
-const INITIAL_RECORDS = [
-  { id: 'seed-1', report_date: '2026-10-25', total_enquiries: 29, total_responses: 29, total_confirmations: null, total_bookings: 11, tomorrow_bookings: null, whatsapp_calls_messages: 32, normal_calls: 15 },
-  { id: 'seed-2', report_date: '2027-10-26', total_enquiries: 31, total_responses: 31, total_confirmations: null, total_bookings: 7,  tomorrow_bookings: null, whatsapp_calls_messages: 28, normal_calls: 28 }, // Anomaly record
-  { id: 'seed-3', report_date: '2026-10-27', total_enquiries: 47, total_responses: 47, total_confirmations: null, total_bookings: 26, tomorrow_bookings: null, whatsapp_calls_messages: 34, normal_calls: 12 },
-  { id: 'seed-4', report_date: '2026-10-28', total_enquiries: 37, total_responses: 37, total_confirmations: null, total_bookings: 28, tomorrow_bookings: null, whatsapp_calls_messages: 26, normal_calls: 11 },
-  { id: 'seed-5', report_date: '2026-10-29', total_enquiries: 25, total_responses: 25, total_confirmations: null, total_bookings: 21, tomorrow_bookings: null, whatsapp_calls_messages: 48, normal_calls: 10 },
-  { id: 'seed-6', report_date: '2026-10-30', total_enquiries: 34, total_responses: 34, total_confirmations: null, total_bookings: 12, tomorrow_bookings: null, whatsapp_calls_messages: 29, normal_calls: 7 },
-  { id: 'seed-7', report_date: '2026-10-31', total_enquiries: 30, total_responses: 30, total_confirmations: null, total_bookings: 14, tomorrow_bookings: null, whatsapp_calls_messages: 20, normal_calls: 11 },
-  { id: 'seed-8', report_date: '2026-11-01', total_enquiries: 42, total_responses: 42, total_confirmations: null, total_bookings: null, tomorrow_bookings: null, whatsapp_calls_messages: 42, normal_calls: 10 },
-  { id: 'seed-9', report_date: '2026-11-02', total_enquiries: 42, total_responses: 42, total_confirmations: null, total_bookings: 14, tomorrow_bookings: null, whatsapp_calls_messages: 29, normal_calls: 12 },
-  { id: 'seed-10', report_date: '2026-11-03', total_enquiries: 46, total_responses: 46, total_confirmations: null, total_bookings: 22, tomorrow_bookings: null, whatsapp_calls_messages: null, normal_calls: 25 },
-  { id: 'seed-11', report_date: '2026-11-04', total_enquiries: 32, total_responses: 32, total_confirmations: null, total_bookings: 18, tomorrow_bookings: null, whatsapp_calls_messages: 27, normal_calls: 5 },
-  { id: 'seed-12', report_date: '2026-11-05', total_enquiries: 27, total_responses: 27, total_confirmations: null, total_bookings: 10, tomorrow_bookings: null, whatsapp_calls_messages: 21, normal_calls: null },
-  { id: 'seed-13', report_date: '2026-11-06', total_enquiries: 14, total_responses: 14, total_confirmations: null, total_bookings: 10, tomorrow_bookings: null, whatsapp_calls_messages: null, normal_calls: 7 },
-  { id: 'seed-14', report_date: '2026-11-07', total_enquiries: 21, total_responses: 21, total_confirmations: null, total_bookings: 11, tomorrow_bookings: 28,   whatsapp_calls_messages: 15, normal_calls: 7 },
-  { id: 'seed-15', report_date: '2026-11-08', total_enquiries: 24, total_responses: 24, total_confirmations: 13,   total_bookings: null, tomorrow_bookings: null, whatsapp_calls_messages: 21, normal_calls: 3 },
-  { id: 'seed-16', report_date: '2026-11-09', total_enquiries: 2,  total_responses: 2,  total_confirmations: 2,    total_bookings: 2,    tomorrow_bookings: null, whatsapp_calls_messages: null, normal_calls: 1 },
-];
+// Clean operational baseline - dummy records removed for fresh production data entry
+const INITIAL_RECORDS = [];
 
-const INITIAL_AUDIT_LOGS = [
-  {
-    id: 'log-seed-1',
-    table_name: 'daily_reports',
-    record_id: 'seed-2',
-    action: 'INSERT',
-    old_data: null,
-    new_data: { report_date: '2027-10-26', total_enquiries: 31, total_bookings: 7 },
-    changed_fields: { event: 'created', note: 'Historical record imported. Flagged for verification.' },
-    performed_by: 'system',
-    performed_by_name: 'Database Migration Runner',
-    performed_by_role: 'system',
-    performed_at: '2026-11-09T08:00:00Z',
-  },
-  {
-    id: 'log-seed-2',
-    table_name: 'daily_reports',
-    record_id: 'seed-16',
-    action: 'INSERT',
-    old_data: null,
-    new_data: { report_date: '2026-11-09', total_enquiries: 2, total_bookings: 2 },
-    changed_fields: { event: 'created' },
-    performed_by: 'staff-1',
-    performed_by_name: 'Shilpa',
-    performed_by_role: 'staff',
-    performed_at: '2026-11-09T18:30:00Z',
-  }
-];
+const INITIAL_AUDIT_LOGS = [];
 
 const INITIAL_USERS = [
   {
@@ -79,9 +36,9 @@ const INITIAL_USERS = [
 ];
 
 const STORAGE_KEYS = {
-  REPORTS: 'ayurdesk_reports_v2',
-  AUDIT_LOGS: 'ayurdesk_audit_logs_v2',
-  USERS: 'ayurdesk_users_v2',
+  REPORTS: 'ayurdesk_reports_v3',
+  AUDIT_LOGS: 'ayurdesk_audit_logs_v3',
+  USERS: 'ayurdesk_users_v3',
 };
 
 const USER_PROFILES_MAP = {
@@ -123,12 +80,44 @@ class DataStore {
   }
 
   initStorage() {
+    // 1. Purge legacy v2 cache containing old dummy seed data & removed therapist keys
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('ayurdesk_reports_v2');
+        localStorage.removeItem('ayurdesk_audit_logs_v2');
+        localStorage.removeItem('ayurdesk_therapists_v2');
+        localStorage.removeItem('ayurdesk_therapist_records_v2');
+      }
+    } catch (e) {
+      console.warn('[AyurDesk] Cache cleanup notice:', e);
+    }
+
+    // 2. Initialize current v3 storage with empty dataset for fresh entries
     if (!localStorage.getItem(STORAGE_KEYS.REPORTS)) {
-      localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(INITIAL_RECORDS));
+      localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify([]));
+    } else {
+      // Clean any lingering seed-tagged records from active storage
+      try {
+        const existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.REPORTS) || '[]');
+        const cleaned = existing.filter((r) => !String(r.id || '').startsWith('seed-'));
+        if (cleaned.length !== existing.length) {
+          localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(cleaned));
+        }
+      } catch (e) {}
     }
+
     if (!localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS)) {
-      localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(INITIAL_AUDIT_LOGS));
+      localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify([]));
+    } else {
+      try {
+        const existingLogs = JSON.parse(localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS) || '[]');
+        const cleanedLogs = existingLogs.filter((l) => !String(l.id || '').startsWith('log-seed-'));
+        if (cleanedLogs.length !== existingLogs.length) {
+          localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(cleanedLogs));
+        }
+      } catch (e) {}
     }
+
     if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
     }
@@ -137,7 +126,7 @@ class DataStore {
   // Get all reports sorted by report_date descending with intelligent sync
   async getReports() {
     const raw = localStorage.getItem(STORAGE_KEYS.REPORTS);
-    let localReports = raw ? JSON.parse(raw) : [...INITIAL_RECORDS];
+    let localReports = raw ? JSON.parse(raw) : [];
 
     // If Supabase client configured, try remote fetch and smart-merge
     if (window.supabaseClient) {
@@ -239,7 +228,7 @@ class DataStore {
   async saveReport(reportData) {
     const user = window.authManager ? window.authManager.getCurrentUser() : null;
     const raw = localStorage.getItem(STORAGE_KEYS.REPORTS);
-    const reports = raw ? JSON.parse(raw) : [...INITIAL_RECORDS];
+    const reports = raw ? JSON.parse(raw) : [];
 
     // Check if report with same date exists
     const existingIndex = reports.findIndex((r) => r.report_date === reportData.report_date);
@@ -341,7 +330,7 @@ class DataStore {
   async updateReport(id, patch) {
     const user = window.authManager ? window.authManager.getCurrentUser() : null;
     const raw = localStorage.getItem(STORAGE_KEYS.REPORTS);
-    const reports = raw ? JSON.parse(raw) : [...INITIAL_RECORDS];
+    const reports = raw ? JSON.parse(raw) : [];
     const index = reports.findIndex((r) => r.id === id || r.report_date === patch.report_date);
     if (index === -1) throw new Error('Record not found');
 
@@ -395,7 +384,7 @@ class DataStore {
 
   async deleteReport(id) {
     const raw = localStorage.getItem(STORAGE_KEYS.REPORTS);
-    const reports = raw ? JSON.parse(raw) : [...INITIAL_RECORDS];
+    const reports = raw ? JSON.parse(raw) : [];
     const index = reports.findIndex((r) => r.id === id);
     if (index === -1) throw new Error('Record not found');
 
@@ -447,7 +436,7 @@ class DataStore {
     }
 
     const raw = localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS);
-    const logs = raw ? JSON.parse(raw) : [...INITIAL_AUDIT_LOGS];
+    const logs = raw ? JSON.parse(raw) : [];
     return logs.sort((a, b) => new Date(b.performed_at) - new Date(a.performed_at));
   }
 
@@ -541,17 +530,17 @@ class DataStore {
     let whatsapp = 0;
     let normal = 0;
 
-    records.forEach((r) => {
-      if (r.total_enquiries !== null) enquiries += r.total_enquiries;
-      if (r.total_responses !== null) responses += r.total_responses;
-      if (r.total_confirmations !== null) confirmations += r.total_confirmations;
-      if (r.total_bookings !== null) bookings += r.total_bookings;
-      if (r.tomorrow_bookings !== null) tomorrow += r.tomorrow_bookings;
-      if (r.whatsapp_calls_messages !== null) whatsapp += r.whatsapp_calls_messages;
-      if (r.normal_calls !== null) normal += r.normal_calls;
+    (records || []).forEach((r) => {
+      if (r.total_enquiries !== null && r.total_enquiries !== undefined) enquiries += Number(r.total_enquiries);
+      if (r.total_responses !== null && r.total_responses !== undefined) responses += Number(r.total_responses);
+      if (r.total_confirmations !== null && r.total_confirmations !== undefined) confirmations += Number(r.total_confirmations);
+      if (r.total_bookings !== null && r.total_bookings !== undefined) bookings += Number(r.total_bookings);
+      if (r.tomorrow_bookings !== null && r.tomorrow_bookings !== undefined) tomorrow += Number(r.tomorrow_bookings);
+      if (r.whatsapp_calls_messages !== null && r.whatsapp_calls_messages !== undefined) whatsapp += Number(r.whatsapp_calls_messages);
+      if (r.normal_calls !== null && r.normal_calls !== undefined) normal += Number(r.normal_calls);
     });
 
-    const count = records.length;
+    const count = (records || []).length;
     const responseRate = enquiries > 0 ? (responses / enquiries) * 100 : 0;
     const bookingConversionRate = enquiries > 0 ? (bookings / enquiries) * 100 : 0;
     const confirmationRate = bookings > 0 ? (confirmations / bookings) * 100 : 0;
@@ -573,12 +562,32 @@ class DataStore {
     };
   }
 
+  // Clear all operational reports & audit logs for a fresh, clean start
+  async clearAllData() {
+    localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify([]));
+    broadcastDataChange('ALL_DATA_CLEARED', null);
+
+    if (window.supabaseClient) {
+      try {
+        await window.supabaseClient
+          .from('daily_reports')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+        await window.supabaseClient
+          .from('audit_logs')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+      } catch (err) {
+        console.warn('[AyurDesk] Supabase clean notice:', err);
+      }
+    }
+    return true;
+  }
+
   resetDataToSeed() {
-    localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(INITIAL_RECORDS));
-    localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(INITIAL_AUDIT_LOGS));
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
+    return this.clearAllData();
   }
 }
 
 window.dataStore = new DataStore();
-

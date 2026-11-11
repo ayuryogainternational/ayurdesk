@@ -40,13 +40,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Reset to Seed Data
+  // Clear Data
   const resetBtn = document.getElementById('btn-reset-seed');
   if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      if (confirm('Are you sure you want to restore the historical 16 seed records? Any unsaved edits will be reset.')) {
-        window.dataStore.resetDataToSeed();
-        window.showToast('Dataset Restored', 'Reset to initial 16 operational records including 2027 anomaly.', 'success');
+    resetBtn.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to clear all stored daily reports and audit logs to start fresh?')) {
+        await window.dataStore.clearAllData();
+        window.showToast('Data Cleared', 'All stored reports and logs have been cleared for fresh entry.', 'success');
       }
     });
   }
